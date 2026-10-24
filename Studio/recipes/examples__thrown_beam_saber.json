@@ -1,0 +1,64 @@
+{
+  "name": "Thrown beam saber",
+  "version": 2,
+  "layers": [
+    {
+      "kind": "bolt",
+      "on": true,
+      "start": 0,
+      "color": "#e040fb",
+      "shape": "blade",
+      "length": 8,
+      "width": 0.5,
+      "speed": 90,
+      "glow": 2.5,
+      "spin": 6,
+      "count": 1,
+      "gap": 0.08,
+      "arc": 0,
+      "scatter": 0
+    },
+    {
+      "kind": "trail",
+      "on": true,
+      "start": 0,
+      "color": "#e040fb",
+      "length": 25,
+      "width": 0.35,
+      "opacity": 0.5
+    },
+    {
+      "kind": "burst",
+      "on": true,
+      "start": 0,
+      "color": "#e986ff",
+      "count": 80,
+      "size": 1.6,
+      "speed": 22,
+      "gravity": 10,
+      "life": 0.6,
+      "texture": "soft",
+      "ring": 6
+    },
+    {
+      "kind": "light",
+      "on": true,
+      "start": 0,
+      "color": "#e040fb",
+      "anchor": "bolt",
+      "intensity": 10,
+      "radius": 40,
+      "duration": 3
+    }
+  ],
+  "baseEffect": "",
+  "colors": [],
+  "colorRule": "t0",
+  "colorSpeed": 0.0,
+  "scale": {
+    "x": 1.0,
+    "y": 1.0,
+    "z": 1.0
+  },
+  "speedMul": 1.0
+}

@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net472</TargetFramework>
+		<RootNamespace>CombatVFX</RootNamespace>
+		<AssemblyName>CombatVFX</AssemblyName>
+
+		<!-- Your BATTLETECH folder. Set it here, or pass it: dotnet build -p:BattleTechPath="D:\Games\BATTLETECH" -->
+		<BattleTechPath Condition="'$(BattleTechPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\BATTLETECH</BattleTechPath>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Lib.Harmony" Version="2.3.6" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="settings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="mod.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="CustomComponents">
+			<HintPath>$(BattleTechPath)\Mods\CustomComponents\CustomComponents.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="0Harmony">
+			<HintPath>$(BattleTechPath)\BattleTech_Data\Managed\0Harmony.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Assembly-CSharp">
+			<HintPath>$(BattleTechPath)\BattleTech_Data\Managed\Assembly-CSharp.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Assembly-CSharp-firstpass">
+			<HintPath>$(BattleTechPath)\BattleTech_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Newtonsoft.Json">
+			<HintPath>$(BattleTechPath)\BattleTech_Data\Managed\Newtonsoft.Json.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine">
+			<HintPath>$(BattleTechPath)\BattleTech_Data\Managed\UnityEngine.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.CoreModule">
+			<HintPath>$(BattleTechPath)\BattleTech_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.JSONSerializeModule">
+			<HintPath>$(BattleTechPath)\BattleTech_Data\Managed\UnityEngine.JSONSerializeModule.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.ParticleSystemModule">
+			<HintPath>$(BattleTechPath)\BattleTech_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.PhysicsModule">
+			<HintPath>$(BattleTechPath)\BattleTech_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.TerrainModule">
+			<HintPath>$(BattleTechPath)\BattleTech_Data\Managed\UnityEngine.TerrainModule.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
+</Project>

@@ -1,0 +1,76 @@
+{
+  "name": "GN Bazooka",
+  "version": 2,
+  "layers": [
+    {
+      "kind": "flash",
+      "on": true,
+      "start": 0,
+      "color": "#ffb0e0",
+      "count": 80,
+      "size": 4,
+      "speed": 14,
+      "spread": 45,
+      "life": 0.22,
+      "texture": "star"
+    },
+    {
+      "kind": "bolt",
+      "on": true,
+      "start": 0,
+      "color": "#ff3fae",
+      "shape": "ball",
+      "length": 3,
+      "width": 3,
+      "speed": 160,
+      "glow": 4,
+      "spin": 0,
+      "count": 1,
+      "gap": 0.08,
+      "arc": 6,
+      "scatter": 0
+    },
+    {
+      "kind": "trail",
+      "on": true,
+      "start": 0,
+      "color": "#ff7ac8",
+      "length": 40,
+      "width": 1.5,
+      "opacity": 0.6
+    },
+    {
+      "kind": "burst",
+      "on": true,
+      "start": 0,
+      "color": "#ff5fb8",
+      "count": 400,
+      "size": 4,
+      "speed": 45,
+      "gravity": 20,
+      "life": 1.2,
+      "texture": "soft",
+      "ring": 30
+    },
+    {
+      "kind": "light",
+      "on": true,
+      "start": 0,
+      "color": "#ff3fae",
+      "anchor": "impact",
+      "intensity": 30,
+      "radius": 140,
+      "duration": 1.2
+    }
+  ],
+  "baseEffect": "",
+  "colors": [],
+  "colorRule": "t0",
+  "colorSpeed": 0.0,
+  "scale": {
+    "x": 1.0,
+    "y": 1.0,
+    "z": 1.0
+  },
+  "speedMul": 1.0
+}

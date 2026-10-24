@@ -1,0 +1,64 @@
+{
+    "Name": "CombatVFX",
+    "Version": "0.3.0",
+    "Description": "Recipe-driven weapon effects from the Effects Studio (drop a recipe into effects\\ and tag a weapon vfx_<recipe>), plus a universal ballistic deflection system. Every mech in combat has a chance to deflect incoming ballistic projectiles based on weapon damage, firing distance, mech weight class, and armor. Rounds that hit the ground may ricochet into nearby mechs. All behaviour tunable via settings.json.",
+    "Author": "LanLeonhart",
+    "Website": "",
+    "Contact": "",
+    "Enabled": true,
+
+    "DLL": "CombatVFX.dll",
+    "DLLEntryPoint": "CombatVFX.ModEntry.Init",
+
+    "DependsOn": [
+        "ModTek"
+    ],
+
+    "ConflictsWith": [],
+
+    "Manifest": [
+    ],
+
+    "Comment_Settings": "Settings below are the fallback defaults. The active configuration is read from settings.json in this mod folder by ModTek and passed to Init.",
+
+    "Settings": {
+        "TestMode": false,
+        "FxTestHotkey": false,
+        "FxTagPrefix": "vfx_",
+
+        "DeflectRadius": 6.5,
+        "GlancingAngleBonus": 0.20,
+        "MinDeflectChance": 0.02,
+        "MaxDeflectChance": 0.55,
+
+        "BaseDeflectChance": 0.28,
+        "ReferenceDamage": 20.0,
+        "DamagePower": 0.5,
+        "MaxDamageScalar": 2.5,
+
+        "CloseRangeScalar": 0.50,
+        "FarRangeScalar":   1.40,
+        "MaxRangeRef":      300.0,
+
+        "AverageTotalArmorByClass": {
+            "Light":   344,
+            "Medium":  657,
+            "Heavy":   857,
+            "Assault": 1128
+        },
+
+        "WeightClassBrackets": [
+            { "Name": "Light",   "MaxTonnage": 35,   "DeflectChanceMultiplier": 0.60, "DamageFraction": 0.15 },
+            { "Name": "Medium",  "MaxTonnage": 55,   "DeflectChanceMultiplier": 1.00, "DamageFraction": 0.15 },
+            { "Name": "Heavy",   "MaxTonnage": 75,   "DeflectChanceMultiplier": 1.35, "DamageFraction": 0.12 },
+            { "Name": "Assault", "MaxTonnage": 9999, "DeflectChanceMultiplier": 1.70, "DamageFraction": 0.08 }
+        ],
+
+        "VFXLightMaxDamage":  12.0,
+        "VFXHeavyMinDamage":  60.0,
+
+        "GroundDeflectEnabled":        true,
+        "GroundDeflectDamageFraction": 0.35,
+        "GroundDeflectMaxBounceRange": 80.0
+    }
+}

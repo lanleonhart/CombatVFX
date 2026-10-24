@@ -1,0 +1,71 @@
+{
+  "name": "GN Rifle Tau",
+  "version": 2,
+  "layers": [
+    {
+      "kind": "flash",
+      "on": true,
+      "start": 0,
+      "color": "#ff8a6a",
+      "count": 60,
+      "size": 3,
+      "speed": 14,
+      "spread": 30,
+      "life": 0.22,
+      "texture": "star"
+    },
+    {
+      "kind": "beam",
+      "on": true,
+      "start": 0,
+      "color": "#d6361a",
+      "core": "#ffe2d6",
+      "width": 3,
+      "glow": 3,
+      "duration": 0.18,
+      "fade": "hold",
+      "reach": "instant",
+      "count": 3,
+      "gap": 0.09,
+      "jitter": 0
+    },
+    {
+      "kind": "burst",
+      "on": true,
+      "start": 0,
+      "color": "#ff6a3d",
+      "count": 160,
+      "size": 2.5,
+      "speed": 30,
+      "gravity": 30,
+      "life": 0.7,
+      "texture": "spark",
+      "ring": 12
+    },
+    {
+      "kind": "light",
+      "on": true,
+      "start": 0,
+      "color": "#d6361a",
+      "anchor": "impact",
+      "intensity": 16,
+      "radius": 80,
+      "duration": 0.8
+    }
+  ],
+  "baseEffect": "WeaponEffect-Weapon_LaserPulse_Medium",
+  "colors": [
+    {
+      "C": "#2ad4ff",
+      "I": 5.0
+    }
+  ],
+  "colorRule": "t0",
+  "colorSpeed": 0.0,
+  "scale": {
+    "x": 40.0,
+    "y": 40.0,
+    "z": 20.0
+  },
+  "speedMul": 0.75
+}

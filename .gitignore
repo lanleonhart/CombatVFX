@@ -1,0 +1,27 @@
+# Unity project (Studio/Unity)
+Studio/Unity/Library/
+Studio/Unity/Temp/
+Studio/Unity/Obj/
+Studio/Unity/Logs/
+Studio/Unity/UserSettings/
+Studio/Unity/*.csproj
+Studio/Unity/*.sln
+Studio/Unity/Assets/Resources/*.mat
+Studio/Unity/Assets/Resources/*.mat.meta
+Studio/Unity/Assets/Studio.unity
+Studio/Unity/Assets/Studio.unity.meta
+
+# built studio and packages
+Studio/build/
+Studio/build_staging/
+dist/
+
+# runtime build
+Runtime/bin/
+Runtime/obj/
+
+# per-machine
+*.log
+*_log.txt
+studio.json
+.vs/

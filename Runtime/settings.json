@@ -1,0 +1,70 @@
+{
+    "TestMode": false,
+
+    "Comment_Fx": "Recipe weapon effects. FxTestHotkey: Ctrl+Shift+E plays the latest recipe from the selected Mech in combat (also on with the game's test tools). FxTagPrefix: the weapon ComponentTag prefix, vfx_<recipe file name>.",
+    "FxTestHotkey": false,
+    "FxTagPrefix": "vfx_",
+
+    "DeflectRadius": 6.5,
+    "GlancingAngleBonus": 0.20,
+    "MinDeflectChance": 0.02,
+    "MaxDeflectChance": 0.55,
+
+    "Comment_Formula": "chance = BaseDeflectChance × DamageScalar × DistanceScalar × WeightMultiplier × ArmorScalar + AngleBonus",
+
+    "BaseDeflectChance": 0.28,
+
+    "Comment_Damage": "DamageScalar = clamp((ReferenceDamage / weaponDamage)^DamagePower, 0.1, MaxDamageScalar). Higher damage = lower scalar = lower chance.",
+    "ReferenceDamage": 20.0,
+    "DamagePower": 0.5,
+    "MaxDamageScalar": 2.5,
+
+    "Comment_Distance": "DistanceScalar = lerp(CloseRangeScalar, FarRangeScalar, clamp01(distance / MaxRangeRef)). Close shots are harder to deflect.",
+    "CloseRangeScalar": 0.50,
+    "FarRangeScalar":   1.40,
+    "MaxRangeRef":      300.0,
+
+    "Comment_Armor": "ArmorScalar = currentTotalArmor / classAverageTotalArmor, clamped 0-1. Stripped mech deflects less reliably.",
+    "AverageTotalArmorByClass": {
+        "Light":   344,
+        "Medium":  657,
+        "Heavy":   857,
+        "Assault": 1128
+    },
+
+    "WeightClassBrackets": [
+        {
+            "Name": "Light",
+            "MaxTonnage": 35,
+            "DeflectChanceMultiplier": 0.60,
+            "DamageFraction": 0.15
+        },
+        {
+            "Name": "Medium",
+            "MaxTonnage": 55,
+            "DeflectChanceMultiplier": 1.00,
+            "DamageFraction": 0.15
+        },
+        {
+            "Name": "Heavy",
+            "MaxTonnage": 75,
+            "DeflectChanceMultiplier": 1.35,
+            "DamageFraction": 0.12
+        },
+        {
+            "Name": "Assault",
+            "MaxTonnage": 9999,
+            "DeflectChanceMultiplier": 1.70,
+            "DamageFraction": 0.08
+        }
+    ],
+
+    "Comment_VFX": "VFX tier is determined by weapon damage. Light < VFXLightMaxDamage <= Medium < VFXHeavyMinDamage <= Heavy.",
+    "VFXLightMaxDamage":  12.0,
+    "VFXHeavyMinDamage":  60.0,
+
+    "Comment_GroundDeflect": "Ballistic rounds that hit terrain ricochet. If the bounce ray hits a mech, GroundDeflectDamageFraction of weapon damage applies to its legs.",
+    "GroundDeflectEnabled":        true,
+    "GroundDeflectDamageFraction": 0.35,
+    "GroundDeflectMaxBounceRange": 80.0
+}
