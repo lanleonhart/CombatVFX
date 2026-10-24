@@ -265,6 +265,9 @@ namespace GNFX
             }
         }
 
+        /// <summary>Look at a point from a little above and to the side, at a distance.</summary>
+        public void FocusOn(Vector3 point, float dist, float side) { CameraMode = "free"; Place(point + new Vector3(dist * side, dist * 0.3f, -dist * 0.8f), point); }
+
         /// <summary>Set the orbit so the camera sits at a point looking at a focus.</summary>
         private void Place(Vector3 cam, Vector3 focus)
         {

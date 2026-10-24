@@ -41,11 +41,12 @@ namespace GNFX
             StockEffectPlayer stock = NewStock(), stock2 = NewStock();
             RecipePlayer recipes = NewRecipes(audio), recipes2 = NewRecipes(audio);
             recipes.Stock = stock; recipes2.Stock = stock2;
+            var jets = gameObject.AddComponent<JetsPlayer>(); jets.Assets = Assets; jets.Additive = Resources.Load<Material>("GNFX_Additive"); jets.Blended = Resources.Load<Material>("GNFX_Blended");
             _rig.Follow = () => recipes.TrackPos ?? stock.TrackPos;
             PlaceDefaultMechs();
             Debug.Log("[Studio] mechs placed: " + _rig.ShooterId + " -> " + _rig.TargetId + ", muzzle " + _rig.Muzzle + ", impact " + _rig.Impact);
             _ui = gameObject.AddComponent<StudioUI>();
-            _ui.Assets = Assets; _ui.Rig = _rig; _ui.Stock = stock; _ui.Stock2 = stock2; _ui.Recipes = recipes; _ui.Recipes2 = recipes2; _ui.Audio = audio; _ui.RecipesDir = Config.recipesPath;
+            _ui.Assets = Assets; _ui.Rig = _rig; _ui.Stock = stock; _ui.Stock2 = stock2; _ui.Recipes = recipes; _ui.Recipes2 = recipes2; _ui.Audio = audio; _ui.RecipesDir = Config.recipesPath; _ui.Jets = jets;
             _ui.Init();
             // command line: -effect <id> | -recipe <file> | -shot <png> [-shotAt <seconds>] -quit, for checking the studio without a screen
             string[] args = Environment.GetCommandLineArgs();

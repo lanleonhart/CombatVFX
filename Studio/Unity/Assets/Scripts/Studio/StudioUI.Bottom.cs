@@ -13,8 +13,9 @@ namespace GNFX
         private void Timeline(Rect r)
         {
             float x0 = r.x + 118f, x1 = r.xMax - 16f, width = x1 - x0;
-            float pre = _mode == 0 ? 0f : Pre();
-            float length = Mathf.Max(0.5f, _mode == 0 ? Playback.Length : Mathf.Max(_recipe.Length(Rig.Range, pre), Playback.Now + 0.2f));
+            bool recipeMode = _mode == 1 || _mode == 2;
+            float pre = recipeMode ? Pre() : 0f;
+            float length = Mathf.Max(0.5f, !recipeMode ? Playback.Length : Mathf.Max(_recipe.Length(Rig.Range, pre), Playback.Now + 0.2f));
             float pps = width / length;
             GUI.Label(new Rect(r.x + 10, r.y + 6, 100, 18), "TIMELINE", _cap);
             GUI.Label(new Rect(r.x + 10, r.y + 24, 104, 18), Playback.Now.ToString("0.00") + " / " + length.ToString("0.0") + " s", _small);
@@ -31,10 +32,10 @@ namespace GNFX
             Event e = Event.current;
             // blocks
             float impact = 0f, end;
-            List<Recipe.Item> items = _mode == 0 ? new List<Recipe.Item>() : _recipe.Timeline(Rig.Range, pre, out impact, out end);
+            List<Recipe.Item> items = !recipeMode ? new List<Recipe.Item>() : _recipe.Timeline(Rig.Range, pre, out impact, out end);
             float blockY = r.y + 20f, blockH = 14f;
             if (pre > 0f) { GUI.DrawTexture(new Rect(x0, r.y + 16, pre * pps, r.height - 22), Solid(new Color(1f, 1f, 1f, 0.05f))); GUI.Label(new Rect(x0 + 2, r.yMax - 18, 80, 14), "pre-fire", _small); }
-            if (_mode != 0 && _recipe.HasBase)
+            if (recipeMode && _recipe.HasBase)
             {
                 float flight = Mathf.Min(1.5f, 0.3f + Rig.Range / 300f);
                 var br = new Rect(x0 + pre * pps, blockY, flight * pps, blockH);
@@ -44,15 +45,15 @@ namespace GNFX
                 GUI.Label(new Rect(br.xMax - 6, blockY + blockH - 2, 20, 14), "♪", _small);
                 blockY += blockH + 4f;
             }
-            else if (_mode == 0)
+            else if (!recipeMode)
             {
-                var br = new Rect(x0, blockY, Mathf.Min(width, 1.6f * pps), blockH);
+                var br = new Rect(x0, blockY, Mathf.Min(width, (_mode == 3 ? Jets.Recipe.burst : 1.6f) * pps), blockH);
                 GUI.DrawTexture(br, Solid(new Color(0.5f, 0.5f, 0.45f, 0.5f)));
-                GUI.Label(new Rect(br.x + 4, br.y - 1, 300, 16), (_effect ?? "").Replace("WeaponEffect-", ""), _small);
+                GUI.Label(new Rect(br.x + 4, br.y - 1, 300, 16), _mode == 3 ? "jump burst · " + Jets.Recipe.name : (_effect ?? "").Replace("WeaponEffect-", ""), _small);
             }
             int lanes = Mathf.Max(1, items.Count);
             float laneH = Mathf.Clamp((r.yMax - 6f - blockY) / lanes, 6f, blockH);
-            for (int i = 0; i < _recipe.layers.Count && _mode != 0; i++)
+            for (int i = 0; i < _recipe.layers.Count && recipeMode; i++)
             {
                 Layer l = _recipe.layers[i];
                 int idx = items.FindIndex(x => x.L == l);
@@ -77,7 +78,7 @@ namespace GNFX
                 if (e.type == EventType.MouseUp) { _dragLayer = -1; Fire(); e.Use(); }
             }
             // impact and now markers
-            if (_mode != 0 && impact > 0f)
+            if (recipeMode && impact > 0f)
             {
                 float x = x0 + impact * pps;
                 GUI.DrawTexture(new Rect(x, r.y + 6, 1, r.height - 12), Solid(new Color(1f, 0.4f, 0.3f, 0.9f)));
@@ -139,6 +140,7 @@ namespace GNFX
                 {
                     if (_pickShooter) Rig.PlaceMechs(id, Rig.TargetId); else Rig.PlaceMechs(Rig.ShooterId, id);
                     ApplyHint();
+                    if (_mode == 3) { Jets.Attach(Rig.Shooter, Rig.ShooterId); FocusEmitter(); }
                     Rig.Frame(Rig.CameraMode == "free" ? "shoulder" : Rig.CameraMode); _pickShooter = _pickTarget = false;
                 }
             }

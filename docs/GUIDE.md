@@ -106,6 +106,22 @@ enters its pre-firing state and the rest when it fires. Parts added from a pre-f
 Anchors: `muzzle`, `impact`, `ground` (under the impact), `bolt` (rides the first bolt). Fades: `ease out`, `linear`,
 `hold`, `pulse`, `flicker`, `in`. Textures: `soft`, `star`, `spark`, `ring`, `smoke`, `disc`.
 
+## 3b. Jets: GN particles instead of jump-jet exhaust
+
+The **Jets** tab works on the stage's shooter 'Mech. It finds the game's own jump-jet components for that prefab
+(`chrPrfComp_<base>_centertorso_jumpjet` and the leg ones, attached to the j_COCKPIT and j_LCalf / j_RCalf bones),
+lets you remove them, and places one GN particle emitter on a bone of the model: pick the bone, slide the offset
+(left/right, down/up, back/forward in metres), choose which way it blows and how wide. Then tune the particles
+(colours with a gold-spark mix, density, size, thrust speed, drift, twinkle, lifetime), the idle stream that runs all
+the time, the drive glow and the jump burst length. Space jumps. Save writes `recipes\jets\<name>.json`; "Install"
+copies it to `Mods\CombatVFX\jets`.
+
+In the game, CombatVFX puts the emitter on every 'Mech whose chassis carries the ChassisTag `vfx_jets_<name>`, idles
+it, bursts it when the game starts the jets, and stops the stock exhausts if the recipe says so. The folder hot-reloads
+for the next 'Mech that spawns.
+
+Colour fields anywhere in the studio open a full picker on a double-click of the swatch or the hex.
+
 ## 4. From the studio to the game
 
 1. **Install the mod**: copy `Mods\CombatVFX` into the game's `Mods` folder. It needs ModTek. It does nothing until it

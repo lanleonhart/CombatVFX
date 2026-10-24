@@ -36,6 +36,16 @@ namespace GNFX
 
         private void LayerTab()
         {
+            if (_mode == 3)
+            {
+                GUILayout.Label("JETS", _cap);
+                GUILayout.Label("One GN particle emitter on a bone of the loaded 'Mech replaces its jump-jet exhausts. Place it with the bone and offset sliders on the left, aim it with Blows, then tune the particles. Space jumps.", _small);
+                GUILayout.Space(6);
+                GUILayout.Label("The game attaches jets to j_COCKPIT (torso) and j_LCalf / j_RCalf (legs). The MAD-GN's drive cone is part of the torso mesh, so pick j_COCKPIT and slide the offset up and back until the emitter sits in the cone.", _small);
+                GUILayout.Space(6);
+                GUILayout.Label("Emitter at " + (Jets.Emitter != null ? Jets.Emitter.position.ToString("0.0") : "—") + (Jets.Jumping ? "  ·  jumping" : "  ·  idle"), _small);
+                return;
+            }
             if (_mode == 0)
             {
                 GUILayout.Label("THIS EFFECT", _cap);

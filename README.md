@@ -19,6 +19,8 @@ A **recipe** starts from one of the game's 47 stock effects and reshapes it with
 4. **Game** tab: read the CustomAmmoCategories lines for your weapon JSON, or let the studio write them into the weapon file (it finds every weapon def under `Mods` and keeps a backup). "Install recipe" copies it into `Mods\CombatVFX\effects`; the weapon gets the tag `vfx_<recipe>`.
 5. In a mission the mod plays it. With `FxTestHotkey: true` in the mod's `settings.json` (or the game's test tools on), Ctrl+Shift+E plays the latest recipe from the selected 'Mech, so you can tune with the game running: save in the studio, press the key.
 
+A **Jets** tab replaces a 'Mech's jump-jet exhaust with one particle emitter placed on its model (built for GN drives, usable for anything), played in the game on chassis tagged `vfx_jets_<name>`.
+
 See **[docs/GUIDE.md](docs/GUIDE.md)** for every layer, field and file.
 
 ## What needs what

@@ -98,14 +98,23 @@ namespace GNFX
         // ------------------------------------------------------------------ colour
 
         /// <summary>Swatch, hex, hue/saturation/brightness sliders, palette, and the base effect's own colour. Returns the new hex.</summary>
-        private string ColorPicker(string label, string hex)
+        private string _revertKey, _revertHex;
+
+        private string ColorPicker(string label, string hex, string key = null)
         {
+            key = key ?? label;
+            if (_revertKey == key) { hex = _revertHex; _revertKey = null; }
+            string live = PopupValue(key); if (live != null) hex = live;
             Color c = Recipe.Col(hex ?? "#ffffff");
             float h, s, v; Color.RGBToHSV(c, out h, out s, out v);
             GUILayout.BeginHorizontal();
             GUILayout.Label(label, _small, GUILayout.Width(118));
             var sw = GUILayoutUtility.GetRect(26, 18, GUILayout.Width(26)); GUI.DrawTexture(sw, Solid(c));
-            string nh = GUILayout.TextField(hex ?? "", _field, GUILayout.Width(74));
+            var hr = GUILayoutUtility.GetRect(74, 20, GUILayout.Width(74));
+            Event ev = Event.current;
+            if (ev.type == EventType.MouseDown && ev.clickCount == 2 && (sw.Contains(ev.mousePosition) || hr.Contains(ev.mousePosition))) { OpenPopup(key, hex, ev.mousePosition); ev.Use(); }
+            string nh = _popupKey == key ? hex : GUI.TextField(hr, hex ?? "", _field);
+            if (_popupKey == key) GUI.Label(hr, hex ?? "", _field);
             GUILayout.FlexibleSpace();
             if (_recipe.HasBase && GUILayout.Button("base", _btnSmall, GUILayout.Width(44))) { Color? bc = Stock.ProjectileColor(_recipe.baseEffect); if (bc.HasValue) nh = "#" + ColorUtility.ToHtmlStringRGB(bc.Value).ToLowerInvariant(); else Toast("That effect has no coloured projectile to read"); }
             GUILayout.EndHorizontal();

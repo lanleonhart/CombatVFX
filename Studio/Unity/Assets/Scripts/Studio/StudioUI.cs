@@ -131,6 +131,7 @@ namespace GNFX
         public void Fire()
         {
             if (Rig == null) return;
+            if (_mode == 3) { Jets.Jump(); return; }
             Stock.Clear(); Recipes.Clear(); Stock2.Clear(); Recipes2.Clear();
             Playback.SeekTo = -1f;
             if (_mode == 0)
@@ -276,12 +277,13 @@ namespace GNFX
             MouseOverPanel = top.Contains(m) || left.Contains(m) || right.Contains(m) || bottom.Contains(m) || timeline.Contains(m);
             GUI.Box(top, GUIContent.none, _box); GUI.Box(left, GUIContent.none, _box); GUI.Box(right, GUIContent.none, _box); GUI.Box(bottom, GUIContent.none, _box); GUI.Box(timeline, GUIContent.none, _box);
             TopBar(top);
-            if (_mode == 2) Library(left); else Left(left);
+            if (_mode == 2) Library(left); else if (_mode == 3) JetsLeft(left); else Left(left);
             Right(right); Timeline(timeline); Bottom(bottom);
             if (!string.IsNullOrEmpty(_toast) && Time.unscaledTime < _toastUntil) { var r = new Rect(W / 2f - 260f, T + 14f, 520f, 26f); GUI.Box(r, GUIContent.none, _box); GUI.Label(new Rect(r.x + 10, r.y + 4, r.width - 20, 20), _toast, _label); }
             if (Playback.Paused) GUI.Label(new Rect(_viewport.x + 14, _viewport.y + 8, 200, 20), "PAUSED  ·  " + Playback.Now.ToString("0.00") + " s", _cap);
             else if (Playback.Speed < 0.99f) GUI.Label(new Rect(_viewport.x + 12, _viewport.y + 8, 200, 20), "×" + Playback.Speed.ToString("0.##") + "  ·  " + Playback.Now.ToString("0.00") + " s", _cap);
             if (Assets != null && !Assets.Ready) GamePathBox(new Rect(leftW + 20f, T + 20f, W - leftW - Rw - 40f, 110f));
+            ColorPopup();
         }
 
         /// <summary>Drag handles on the inner edges of the side panels; the preview takes what is left.</summary>
@@ -326,8 +328,10 @@ namespace GNFX
             if (GUILayout.Button("Game effects", _mode == 0 ? _btnOn : _btn, GUILayout.Width(100))) { _mode = 0; ApplyHint(); }
             if (GUILayout.Button("Recipe", _mode == 1 ? _btnOn : _btn, GUILayout.Width(70))) { _mode = 1; ApplyHint(); }
             if (GUILayout.Button("Library", _mode == 2 ? _btnOn : _btn, GUILayout.Width(70))) { _mode = 2; RefreshFiles(); }
+            if (GUILayout.Button("Jets", _mode == 3 ? _btnOn : _btn, GUILayout.Width(55))) EnterJets();
             GUILayout.Space(16);
             if (_mode == 0) GUILayout.Label(_effect ?? "", _label, GUILayout.Width(300));
+            else if (_mode == 3) GUILayout.Label("Jets · " + Short(Rig.ShooterId) + " · " + (Jets.Recipe.name ?? ""), _label, GUILayout.Width(300));
             else
             {
                 GUILayout.Label("Name", _small, GUILayout.Width(36));
@@ -341,7 +345,7 @@ namespace GNFX
                 if (GUILayout.Button("Duplicate", _btn, GUILayout.Width(75))) { _recipe = Recipe.Parse(_recipe.ToJson()); _recipe.name += " copy"; _recipePath = null; MarkSaved(); _mode = 1; }
             }
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("FIRE  (space)", _btnOn, GUILayout.Width(110))) Fire();
+            if (GUILayout.Button(_mode == 3 ? "JUMP  (space)" : "FIRE  (space)", _btnOn, GUILayout.Width(110))) Fire();
             if (GUILayout.Button("Loop", _loop ? _btnOn : _btn, GUILayout.Width(50))) _loop = !_loop;
             GUILayout.Space(10);
             foreach (float sp in new[] { 1f, 0.5f, 0.25f, 0.1f })

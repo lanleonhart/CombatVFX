@@ -856,6 +856,11 @@ namespace CombatVFX.Combat
 
                 DeflectorShared.EnsureFields();
 
+                // This runs for every ballistic effect on every frame, pooled idle ones included. The state is read
+                // without boxing and checked first, and the type name is only built when it is used (it allocated a
+                // string, and the two reflection reads a boxed value each, every frame: ~28 KB a frame, 2026-10-23).
+                if (!Settings.Instance.DebugLogging && StateRef(__instance) != WeaponEffect.WeaponEffectState.Firing) return;
+
                 int    id       = __instance.GetInstanceID();
                 string typeName = __instance.GetType().Name;
 
@@ -972,7 +977,22 @@ namespace CombatVFX.Combat
             }
         }
 
+        private static readonly AccessTools.FieldRef<WeaponEffect, WeaponEffect.WeaponEffectState> StateRef =
+            AccessTools.FieldRefAccess<WeaponEffect, WeaponEffect.WeaponEffectState>("currentState");
+
+        // the answer only depends on the effect's class: decided once per class, not per frame
+        private static readonly Dictionary<Type, bool> _ballistic = new Dictionary<Type, bool>();
+
         private static bool IsBallisticProjectile(WeaponEffect instance)
+        {
+            Type t = instance.GetType();
+            if (_ballistic.TryGetValue(t, out bool known)) return known;
+            bool b = IsBallisticProjectileType(instance);
+            _ballistic[t] = b;
+            return b;
+        }
+
+        private static bool IsBallisticProjectileType(WeaponEffect instance)
         {
             // Hard type exclusions — these are never physical projectiles
             if (instance is MissileEffect) return false;
