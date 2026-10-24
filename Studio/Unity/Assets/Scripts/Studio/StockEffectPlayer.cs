@@ -62,6 +62,9 @@ namespace GNFX
 
         public float PrefireOf(string effectId) { WeaponEffect fx = Effect(effectId); return fx != null ? Mathf.Max(0f, fx.preFireDuration) : 0f; }
 
+        /// <summary>The impact variation names of a stock effect (its own, or its bullet's or missile's), or null.</summary>
+        public string[] ImpactVariations(string effectId) { WeaponEffect fx = Effect(effectId); if (fx == null) return null; WeaponEffect sub = Sub(fx); return !string.IsNullOrEmpty(fx.impactVFXBase) ? fx.impactVFXVariations : sub?.impactVFXVariations; }
+
         /// <summary>One part of a stock effect as a prefab: its pre-fire, muzzle flash, impact (a random variation), armour, structure, terrain or building hit.</summary>
         public GameObject PartPrefab(string effectId, string part)
         {
@@ -72,6 +75,13 @@ namespace GNFX
             {
                 case "prefire": return fx.preFireVFXPrefab ?? sub?.preFireVFXPrefab;
                 case "flash": return fx.muzzleFlashVFXPrefab ?? sub?.muzzleFlashVFXPrefab;
+                default:
+                    if (part != null && part.StartsWith("impact:"))
+                    {
+                        string bn = !string.IsNullOrEmpty(fx.impactVFXBase) ? fx.impactVFXBase : sub?.impactVFXBase;
+                        return string.IsNullOrEmpty(bn) ? null : Assets.Prefab(bn + "_" + part.Substring(7)) ?? Assets.Prefab(bn);
+                    }
+                    return null;
                 case "impact":
                 {
                     string baseName = !string.IsNullOrEmpty(fx.impactVFXBase) ? fx.impactVFXBase : sub?.impactVFXBase;

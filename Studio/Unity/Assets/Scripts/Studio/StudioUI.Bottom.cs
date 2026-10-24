@@ -61,7 +61,7 @@ namespace GNFX
                 var br = new Rect(x0 + it.Start * pps, blockY + idx * laneH, Mathf.Max(3f, (it.End - it.Start) * pps), laneH - 1f);
                 Color c = KindColor(l.kind); c.a = i == _layer ? 1f : 0.7f;
                 GUI.DrawTexture(br, Solid(c));
-                if (laneH >= 10f) GUI.Label(new Rect(br.x + 3, br.y - 2, 200, 14), KIND_NAMES[l.kind], new GUIStyle(_small) { normal = { textColor = Color.black }, fontSize = 10 });
+                if (laneH >= 10f) GUI.Label(new Rect(br.x + 3, br.y - 2, 260, 14), LayerLabel(l), new GUIStyle(_small) { normal = { textColor = Color.black }, fontSize = 10, clipping = TextClipping.Clip });
                 // drag to move the start
                 if (e.type == EventType.MouseDown && br.Contains(e.mousePosition)) { _dragLayer = i; _dragOffset = e.mousePosition.x - br.x; _layer = i; _tab = 0; e.Use(); }
             }

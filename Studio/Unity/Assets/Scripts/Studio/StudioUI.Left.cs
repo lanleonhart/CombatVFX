@@ -116,7 +116,7 @@ namespace GNFX
                 GUILayout.BeginHorizontal();
                 bool on = GUILayout.Toggle(l.on, "", GUILayout.Width(18)); if (on != l.on) l.on = on;
                 var sw = GUILayoutUtility.GetRect(6, 18, GUILayout.Width(6)); GUI.DrawTexture(sw, Solid(l.on ? KindColor(l.kind) : new Color(0.3f, 0.3f, 0.3f)));
-                if (GUILayout.Button(KIND_NAMES[l.kind] + "  ·  " + l.start.ToString("0.##") + " s", i == _layer ? _btnOn : _btn)) { _layer = i == _layer ? -1 : i; if (_layer >= 0) _tab = 0; }
+                if (GUILayout.Button(LayerLabel(l) + "  ·  " + l.start.ToString("0.##") + " s" + (l.phase == "prefire" ? "  ·  pre-fire" : ""), i == _layer ? _btnOn : _btn)) { _layer = i == _layer ? -1 : i; if (_layer >= 0) _tab = 0; }
                 if (GUILayout.Button("S", _solo == i ? _btnOn : _btnSmall, GUILayout.Width(24))) { _solo = _solo == i ? -1 : i; Fire(); }
                 if (GUILayout.Button("✕", _btnSmall, GUILayout.Width(26))) { _recipe.layers.RemoveAt(i); if (_solo == i) _solo = -1; _layer = Mathf.Min(_layer, _recipe.layers.Count - 1); GUILayout.EndHorizontal(); break; }
                 GUILayout.EndHorizontal();
@@ -125,15 +125,19 @@ namespace GNFX
             GUILayout.Space(8); GUILayout.Label("ADD A LAYER", _cap);
             foreach (string[] group in KIND_GROUPS)
             {
+                if (group[1] == "part") continue;        // the game's own pieces are listed by name in the catalogue below
                 GUILayout.Label(group[0], _small);
                 GUILayout.BeginHorizontal();
                 for (int i = 1; i < group.Length; i++)
                 {
-                    if (i > 1 && (i - 1) % 3 == 0) { GUILayout.EndHorizontal(); GUILayout.BeginHorizontal(); }
+                    int perRow = _leftW < 330f ? 2 : 3;
+                    if (i > 1 && (i - 1) % perRow == 0) { GUILayout.EndHorizontal(); GUILayout.BeginHorizontal(); }
                     if (GUILayout.Button("+ " + KIND_NAMES[group[i]], _btnSmall)) { _recipe.layers.Add(Layer.New(group[i])); _layer = _recipe.layers.Count - 1; _tab = 0; Fire(); }
                 }
                 GUILayout.EndHorizontal();
             }
+            GUILayout.Space(8);
+            Catalog();
             GUILayout.Space(8);
             GUILayout.Label("RECIPES · " + _files.Count + "  ·  the Library tab has pictures and search", _cap);
             string family = null;

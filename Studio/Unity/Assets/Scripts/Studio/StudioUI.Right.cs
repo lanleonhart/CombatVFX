@@ -51,6 +51,8 @@ namespace GNFX
                     if (GUILayout.Button("+ " + StockEffectPlayer.PartNames[i], _btnSmall)) AddPart(_effect, StockEffectPlayer.Parts[i]);
                 }
                 GUILayout.EndHorizontal();
+                string[] variations = Stock.ImpactVariations(_effect);
+                if (variations != null && variations.Length > 1) { GUILayout.BeginHorizontal(); foreach (string v in variations) if (GUILayout.Button("+ impact " + v, _btnSmall)) AddPart(_effect, "impact:" + v); GUILayout.EndHorizontal(); }
                 GUILayout.Space(8); GUILayout.Label("MAKE A RECIPE FROM IT", _cap);
                 if (GUILayout.Button("New recipe with this as its base", _btn)) { _recipe = new Recipe { name = (_effect ?? "").Replace("WeaponEffect-Weapon_", "").Replace("WeaponEffect-", "").Replace("_", " "), baseEffect = _effect }; _recipePath = null; _layer = -1; _solo = -1; _undo.Clear(); _redo.Clear(); MarkSaved(); _mode = 1; ApplyHint(); }
                 GUILayout.Space(8); GUILayout.Label("ASSETS", _cap);
@@ -61,7 +63,7 @@ namespace GNFX
             {
                 Layer l = _recipe.layers[_layer];
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(KIND_NAMES[l.kind].ToUpperInvariant() + "  ·  layer " + (_layer + 1) + " of " + _recipe.layers.Count, _cap);
+                GUILayout.Label(LayerLabel(l).ToUpperInvariant() + "  ·  layer " + (_layer + 1) + " of " + _recipe.layers.Count, _cap);
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Up", _btnSmall) && _layer > 0) { _recipe.layers.RemoveAt(_layer); _recipe.layers.Insert(_layer - 1, l); _layer--; }
                 if (GUILayout.Button("Down", _btnSmall) && _layer < _recipe.layers.Count - 1) { _recipe.layers.RemoveAt(_layer); _recipe.layers.Insert(_layer + 1, l); _layer++; }
@@ -91,9 +93,10 @@ namespace GNFX
             l.effect = effectId; l.part = part;
             l.phase = part == "prefire" ? "prefire" : "fire";
             l.anchor = part == "prefire" || part == "flash" ? "muzzle" : part == "terrain" ? "ground" : "impact";
+            if (part.StartsWith("impact")) l.duration = 2.5f;
             l.duration = part == "prefire" ? Mathf.Max(0.3f, Stock.PrefireOf(effectId)) : 2f;
             _recipe.layers.Add(l); _layer = _recipe.layers.Count - 1;
-            Toast("Added " + StockEffectPlayer.PartNames[Array.IndexOf(StockEffectPlayer.Parts, part)] + " of " + effectId.Replace("WeaponEffect-Weapon_", "") + " to " + _recipe.name + " — see the Recipe tab");
+            Toast("Added " + PartLabel(part) + " of " + Pretty(effectId) + " to " + _recipe.name + (_mode == 0 ? " — see the Recipe tab" : ""));
         }
 
         private static string LayerHelp(string kind)

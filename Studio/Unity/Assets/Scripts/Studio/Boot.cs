@@ -10,7 +10,7 @@ namespace GNFX
     public class Boot : MonoBehaviour
     {
         public static Boot Instance;
-        [Serializable] public class Settings { public string gamePath = ""; public string recipesPath = ""; public string shooter = ""; public string target = ""; public string backdrop = "dusk"; public string camera = "shoulder"; }
+        [Serializable] public class Settings { public string gamePath = ""; public string recipesPath = ""; public string shooter = ""; public string target = ""; public string backdrop = "dusk"; public string camera = "shoulder"; public float leftW = 300f; public float rightW = 360f; }
         public Settings Config = new Settings();
         public GameAssets Assets = new GameAssets();
         private SceneRig _rig; private StudioUI _ui;

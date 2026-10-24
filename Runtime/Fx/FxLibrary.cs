@@ -149,6 +149,9 @@ namespace CombatVFX.Fx
                             break;
                         }
                         case "armor": name = fx.armorDamageVFXName ?? sub?.armorDamageVFXName; break;
+                        default:
+                            if (part != null && part.StartsWith("impact:")) { string b2 = !string.IsNullOrEmpty(fx.impactVFXBase) ? fx.impactVFXBase : sub?.impactVFXBase; if (!string.IsNullOrEmpty(b2)) name = b2 + "_" + part.Substring(7); }
+                            break;
                         case "structure": name = fx.structureDamageVFXName ?? sub?.structureDamageVFXName; break;
                         case "terrain": name = fx.terrainHitVFXBase ?? sub?.terrainHitVFXBase; break;
                         case "building": name = fx.buildingHitOverlayVFXName ?? sub?.buildingHitOverlayVFXName; break;

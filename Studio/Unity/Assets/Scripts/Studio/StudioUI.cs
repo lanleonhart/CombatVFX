@@ -48,7 +48,9 @@ namespace GNFX
         private readonly List<string> _undo = new List<string>(), _redo = new List<string>();
         private string _lastJson = "", _savedJson = "";
         // layout
-        private const float L = 280f, Rw = 360f, T = 44f, B = 48f, TL = 64f;   // panels: left, right, top, bottom stage row, timeline
+        private const float T = 44f, B = 48f, TL = 64f;   // top bar, bottom stage row, timeline
+        private float _leftW = 300f, _rightW = 360f;      // side panels, dragged at their inner edges and remembered
+        private int _dragSplit;                            // 0 none, 1 left edge, 2 right edge
         private const float LibW = 640f;
         private Rect _viewport;
 
@@ -56,6 +58,7 @@ namespace GNFX
 
         public void Init()
         {
+            if (Boot.Instance != null) { if (Boot.Instance.Config.leftW >= 220f) _leftW = Boot.Instance.Config.leftW; if (Boot.Instance.Config.rightW >= 260f) _rightW = Boot.Instance.Config.rightW; }
             if (Assets != null && Assets.Ready) { _effects = Assets.EffectIds; _mechs = Assets.MechIds; }
             _effect = _effects.FirstOrDefault(e => e.Contains("Laser_Medium")) ?? _effects.FirstOrDefault();
             RefreshFiles();
@@ -263,8 +266,10 @@ namespace GNFX
         {
             Skin();
             float W = Screen.width, H = Screen.height;
-            float leftW = _mode == 2 ? LibW : L;
+            if (_leftW < 220f) _leftW = 220f; if (_rightW < 260f) _rightW = 260f;
+            float leftW = _mode == 2 ? Mathf.Max(LibW, _leftW) : _leftW, Rw = _rightW;
             var top = new Rect(0, 0, W, T); var left = new Rect(0, T, leftW, H - T - B - TL); var right = new Rect(W - Rw, T, Rw, H - T - B - TL);
+            Splitters(left, right, W);
             var timeline = new Rect(0, H - B - TL, W, TL); var bottom = new Rect(0, H - B, W, B);
             _viewport = new Rect(leftW, T, W - leftW - Rw, H - T - B - TL);
             Vector2 m = new Vector2(Input.mousePosition.x, H - Input.mousePosition.y);
@@ -274,9 +279,28 @@ namespace GNFX
             if (_mode == 2) Library(left); else Left(left);
             Right(right); Timeline(timeline); Bottom(bottom);
             if (!string.IsNullOrEmpty(_toast) && Time.unscaledTime < _toastUntil) { var r = new Rect(W / 2f - 260f, T + 14f, 520f, 26f); GUI.Box(r, GUIContent.none, _box); GUI.Label(new Rect(r.x + 10, r.y + 4, r.width - 20, 20), _toast, _label); }
-            if (Playback.Paused) GUI.Label(new Rect(_viewport.x + 12, _viewport.y + 8, 200, 20), "PAUSED  ·  " + Playback.Now.ToString("0.00") + " s", _cap);
+            if (Playback.Paused) GUI.Label(new Rect(_viewport.x + 14, _viewport.y + 8, 200, 20), "PAUSED  ·  " + Playback.Now.ToString("0.00") + " s", _cap);
             else if (Playback.Speed < 0.99f) GUI.Label(new Rect(_viewport.x + 12, _viewport.y + 8, 200, 20), "×" + Playback.Speed.ToString("0.##") + "  ·  " + Playback.Now.ToString("0.00") + " s", _cap);
             if (Assets != null && !Assets.Ready) GamePathBox(new Rect(leftW + 20f, T + 20f, W - leftW - Rw - 40f, 110f));
+        }
+
+        /// <summary>Drag handles on the inner edges of the side panels; the preview takes what is left.</summary>
+        private void Splitters(Rect left, Rect right, float W)
+        {
+            var lh = new Rect(left.xMax - 5f, left.y, 10f, left.height); var rh = new Rect(right.x - 5f, right.y, 10f, right.height);
+            Event e = Event.current;
+            bool overL = lh.Contains(e.mousePosition), overR = rh.Contains(e.mousePosition);
+            GUI.DrawTexture(new Rect(left.xMax - 1f, left.y, 2f, left.height), overL || _dragSplit == 1 ? _gold : _line);
+            GUI.DrawTexture(new Rect(right.x - 1f, right.y, 2f, right.height), overR || _dragSplit == 2 ? _gold : _line);
+            if (e.type == EventType.MouseDown && e.button == 0) { if (overL) { _dragSplit = 1; e.Use(); } else if (overR) { _dragSplit = 2; e.Use(); } }
+            if (_dragSplit != 0 && e.type == EventType.MouseDrag)
+            {
+                if (_dragSplit == 1) _leftW = Mathf.Clamp(e.mousePosition.x, 220f, W - _rightW - 300f);
+                else _rightW = Mathf.Clamp(W - e.mousePosition.x, 260f, W - _leftW - 300f);
+                e.Use();
+            }
+            if (_dragSplit != 0 && e.type == EventType.MouseUp) { _dragSplit = 0; Boot.Instance.Config.leftW = _leftW; Boot.Instance.Config.rightW = _rightW; e.Use(); }
+            if (overL || overR || _dragSplit != 0) MouseOverPanel = true;
         }
 
         private string _pathEdit;
