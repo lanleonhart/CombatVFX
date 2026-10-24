@@ -1,5 +1,5 @@
 # Builds the Effects Studio with the game's own Unity (2018.4.2f1) and puts recipes and a settings file next to the exe.
-#   powershell -ExecutionPolicy Bypass -File E:\GNWorkshop\tools\EffectsStudio\build.ps1
+#   powershell -ExecutionPolicy Bypass -File Studiouild.ps1   (from the repo root; -NoRun, -Out <folder>)
 param(
     [string]$Unity = "C:\Program Files\Unity\Editor\Unity.exe",
     [switch]$NoRun,
