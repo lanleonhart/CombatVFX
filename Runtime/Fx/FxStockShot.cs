@@ -15,10 +15,12 @@ namespace CombatVFX.Fx
     {
         private readonly List<KeyValuePair<string, GameObject>> _pooled = new List<KeyValuePair<string, GameObject>>();
 
-        public static FxStockShot Play(string effectId, Vector3 start, Vector3 end, Vector3 scale, Color? tint, float speedMul, bool prefire, bool flash, bool impact, int shots)
+        public AnimationCurve Taper;
+
+        public static FxStockShot Play(string effectId, Vector3 start, Vector3 end, Vector3 scale, Color? tint, float speedMul, bool prefire, bool flash, bool impact, int shots, AnimationCurve taper = null)
         {
             var go = new GameObject("CombatVFX_shot_" + effectId);
-            var s = go.AddComponent<FxStockShot>();
+            var s = go.AddComponent<FxStockShot>(); s.Taper = taper;
             s.StartCoroutine(s.Run(effectId, start, end, scale, tint, speedMul, prefire, flash, impact, Mathf.Max(1, shots)));
             return s;
         }
@@ -75,6 +77,7 @@ namespace CombatVFX.Fx
                     if (laser)
                     {
                         var lr = proj.GetComponent<LineRenderer>() ?? proj.GetComponentInChildren<LineRenderer>(true);
+                        if (lr != null && Taper != null) { var mark = proj.GetComponent<FxTweaked>() ?? proj.AddComponent<FxTweaked>(); mark.Tapers.Add(new FxTweaked.Tp { L = lr, Curve = lr.widthCurve }); lr.widthCurve = FxBase.MultiplyCurve(lr.widthCurve, Taper); }
                         var light = proj.GetComponentInChildren<BattleTech.Rendering.BTLight>(true);
                         if (light != null) { light.gameObject.SetActive(true); light.transform.position = (start + target) * 0.5f; }
                         if (impact && impactBase != null) Spawn(Impact(impactBase, impactVars), target, start, tint, null);
@@ -120,7 +123,7 @@ namespace CombatVFX.Fx
             foreach (var kv in _pooled)
             {
                 if (kv.Value == null) continue;
-                FxRecolor.Untint(kv.Value);
+                FxRecolor.Untint(kv.Value); FxTweaks.Untweak(kv.Value);
                 kv.Value.transform.localScale = Vector3.one;
                 kv.Value.SetActive(false);
                 try { if (dm != null) dm.PoolGameObject(kv.Key, kv.Value); else Destroy(kv.Value); } catch { Destroy(kv.Value); }

@@ -223,6 +223,7 @@ namespace GNFX
             else if (l.tintMode == "custom") m.colors.Add(new ColorEntry { C = l.color, I = 5f });
             m.colorRule = "t0";
             m.baseSettings.matchColors = m.colors.Count > 0;
+            if (Mathf.Abs(l.taperStart - 1f) > 0.001f || Mathf.Abs(l.taperEnd - 1f) > 0.001f) { m.baseSettings.beamStart = l.taperStart; m.baseSettings.beamEnd = l.taperEnd; m.baseSettings.beamShape = l.taperShape; }
             if (!l.withPrefire) m.baseSettings.prefirePart = "none";
             if (!l.withFlash) m.baseSettings.flashPart = "none";
             if (!l.withImpact) { m.baseSettings.impactPart = "none"; m.baseSettings.armorPart = "none"; m.baseSettings.structurePart = "none"; }
@@ -306,7 +307,7 @@ namespace GNFX
                     o.Lines = new LineRenderer[3];
                     float[] w = { l.width * 0.35f, l.width, l.width * (1f + l.glow) };
                     Color[] c = { Recipe.Col(l.core, 0.95f), Recipe.Col(l.color, 0.75f), Recipe.Col(l.color, 0.22f) };
-                    for (int i = 0; i < 3; i++) { o.Lines[i] = Line("beam", c[i], w[i]); o.Lines[i].positionCount = segs + 1; }
+                    for (int i = 0; i < 3; i++) { o.Lines[i] = Line("beam", c[i], w[i]); o.Lines[i].positionCount = segs + 1; if (Mathf.Abs(l.taperStart - 1f) > 0.001f || Mathf.Abs(l.taperEnd - 1f) > 0.001f) o.Lines[i].widthCurve = BaseSettings.Taper(l.taperStart, l.taperEnd, l.taperShape); }
                     break;
                 }
                 case "bolt":

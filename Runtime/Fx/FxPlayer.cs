@@ -347,7 +347,7 @@ namespace CombatVFX.Fx
                     o.Lines = new LineRenderer[3];
                     float[] w = { l.width * 0.35f, l.width, l.width * (1f + l.glow) };
                     Color[] c = { FxRecipe.Col(l.core, 0.95f), FxRecipe.Col(l.color, 0.75f), FxRecipe.Col(l.color, 0.22f) };
-                    for (int i = 0; i < 3; i++) { o.Lines[i] = Line("beam", c[i], w[i]); o.Lines[i].positionCount = segs + 1; }
+                    for (int i = 0; i < 3; i++) { o.Lines[i] = Line("beam", c[i], w[i]); o.Lines[i].positionCount = segs + 1; if (Mathf.Abs(l.taperStart - 1f) > 0.001f || Mathf.Abs(l.taperEnd - 1f) > 0.001f) o.Lines[i].widthCurve = FxBase.Taper(l.taperStart, l.taperEnd, l.taperShape); }
                     break;
                 }
                 case "bolt":
@@ -417,7 +417,8 @@ namespace CombatVFX.Fx
                 {
                     if (string.IsNullOrEmpty(l.effect)) break;
                     Color? tint = l.tintMode == "recipe" && _r != null ? _r.MatchColor : l.tintMode == "custom" ? FxRecipe.Col(l.color) : (Color?)null;
-                    FxStockShot.Play(l.effect, _m, _ip, new Vector3(l.sx, l.sy, l.sz), tint, l.speed > 0f ? l.speed : 1f, l.withPrefire, l.withFlash, l.withImpact, Mathf.Max(1, l.count));
+                    AnimationCurve taper = Mathf.Abs(l.taperStart - 1f) > 0.001f || Mathf.Abs(l.taperEnd - 1f) > 0.001f ? FxBase.Taper(l.taperStart, l.taperEnd, l.taperShape) : null;
+                    FxStockShot.Play(l.effect, _m, _ip, new Vector3(l.sx, l.sy, l.sz), tint, l.speed > 0f ? l.speed : 1f, l.withPrefire, l.withFlash, l.withImpact, Mathf.Max(1, l.count), taper);
                     break;
                 }
                 case "vfx":

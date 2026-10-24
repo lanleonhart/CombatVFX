@@ -27,12 +27,15 @@ namespace CombatVFX.Fx
         internal struct Bl { public BattleTech.Rendering.BTLight L; public float I; }
         internal readonly List<Ps> P = new List<Ps>(); internal readonly List<Ln> Lines = new List<Ln>(); internal readonly List<Tr> Trails = new List<Tr>(); internal readonly List<Li> Lights = new List<Li>(); internal readonly List<Bl> BtLights = new List<Bl>();
         internal readonly List<GameObject> Hidden = new List<GameObject>();
+        internal struct Tp { public LineRenderer L; public AnimationCurve Curve; }
+        internal readonly List<Tp> Tapers = new List<Tp>();
 
         internal void Restore()
         {
             foreach (GameObject g in Hidden) if (g != null) g.SetActive(true);
             foreach (Ps p in P) { if (p.S == null) continue; var m = p.S.main; m.startSizeMultiplier = p.Size; m.startLifetimeMultiplier = p.Life; m.startSpeedMultiplier = p.Speed; m.gravityModifierMultiplier = p.Grav; m.maxParticles = p.Max; var e = p.S.emission; e.rateOverTimeMultiplier = p.Rate; e.rateOverDistanceMultiplier = p.Dist; e.SetBursts(p.Bursts); }
             foreach (Ln l in Lines) if (l.L != null) l.L.widthMultiplier = l.W;
+            foreach (Tp t in Tapers) if (t.L != null) t.L.widthCurve = t.Curve;
             foreach (Tr t in Trails) if (t.T != null) t.T.widthMultiplier = t.W;
             foreach (Li l in Lights) if (l.L != null) l.L.intensity = l.I;
             foreach (Bl b in BtLights) if (b.L != null) b.L.intensity = b.I;
@@ -46,6 +49,17 @@ namespace CombatVFX.Fx
         internal static List<FxTweak> Pending; internal static string PendingPiece;
 
         public static void Untweak(GameObject g) { var m = g != null ? g.GetComponent<FxTweaked>() : null; if (m != null) m.Restore(); }
+
+        /// <summary>Taper the beam line of a projectile by the recipe's base settings; the stock curve is remembered for restoring.</summary>
+        public static void ApplyBeamTaper(GameObject projectile, FxBase b)
+        {
+            if (projectile == null || b == null || !b.HasBeamTaper) return;
+            var lr = projectile.GetComponent<LineRenderer>() ?? projectile.GetComponentInChildren<LineRenderer>(true);
+            if (lr == null) return;
+            var mark = projectile.GetComponent<FxTweaked>() ?? projectile.AddComponent<FxTweaked>();
+            mark.Tapers.Add(new FxTweaked.Tp { L = lr, Curve = lr.widthCurve });
+            lr.widthCurve = FxBase.MultiplyCurve(lr.widthCurve, FxBase.Taper(b.beamStart >= 0f ? b.beamStart : 1f, b.beamEnd >= 0f ? b.beamEnd : 1f, b.beamShape));
+        }
 
         public static void Apply(GameObject g, string piece, List<FxTweak> tweaks)
         {

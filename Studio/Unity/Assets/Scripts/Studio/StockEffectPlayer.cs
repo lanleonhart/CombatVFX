@@ -279,6 +279,7 @@ namespace GNFX
                 LineRenderer lr = proj.GetComponent<LineRenderer>() ?? proj.GetComponentInChildren<LineRenderer>(true);
                 if (lr == null) { Status = "Laser projectile has no LineRenderer"; yield break; }
                 lr.useWorldSpace = true; lr.positionCount = 2; lr.SetPosition(0, muzzle); lr.SetPosition(1, target); lr.enabled = true;
+                if (Mods != null && Mods.baseSettings != null && Mods.baseSettings.HasBeamTaper) lr.widthCurve = BaseSettings.MultiplyCurve(lr.widthCurve, BaseSettings.Taper(Mods.baseSettings.beamStart >= 0f ? Mods.baseSettings.beamStart : 1f, Mods.baseSettings.beamEnd >= 0f ? Mods.baseSettings.beamEnd : 1f, Mods.baseSettings.beamShape));
                 lr.gameObject.SetActive(true);
                 Color c0 = lr.startColor, c1 = lr.endColor;
                 BTLight light = lr.GetComponentInChildren<BTLight>(true);

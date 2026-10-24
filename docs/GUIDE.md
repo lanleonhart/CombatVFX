@@ -36,7 +36,7 @@ A recipe is a JSON file. The studio writes it; the CombatVFX mod reads it. Three
 3. **Base settings** (`baseSettings`): the stock effect's own numbers and pieces, edited before anything is added on
    top. Numbers default to the stock value and can be reset to it: pre-fire duration, projectile speed (beam time for
    lasers), light intensity and radius (lasers), pulse delay, spread, shot and burst delay (ballistics), firing and
-   volley interval and missile curve (missiles), impact time (flamer), next-shot delays. Pieces: the pre-fire, muzzle
+   volley interval and missile curve (missiles), beam taper (lasers: width at the muzzle and at the target with a shape), impact time (flamer), next-shot delays. Pieces: the pre-fire, muzzle
    flash, impact, armour hit and structure hit can each stay stock, be switched off, or be another weapon's (an impact
    can be one named variation). `matchColors` tints the pre-fire, flash and impact to the colour table's first colour
    while keeping their own brightness, since CustomAmmoCategories recolours only the beam. In the game CombatVFX
@@ -59,7 +59,7 @@ start is counted from the impact moment, which the studio computes from the bolt
 ### Along the path (muzzle to target)
 | Kind | What it draws | Main fields |
 |---|---|---|
-| `beam` | three strips: white core, coloured body, wide glow | width, glow, duration, fade, reach (instant / sweep), count (pulses), gap, jitter (jag) |
+| `beam` | three strips: white core, coloured body, wide glow | width, taper (width at the muzzle and at the target as fractions, shape linear / smooth / needle / bulge), glow, duration, fade, reach (instant / sweep), count (pulses), gap, jitter (jag) |
 | `bolt` | a mesh (blade / bolt / ball / ring) flying to the target with glow strips | length, width, speed, glow, spin, count, gap, arc, scatter |
 | `trail` | follows the first bolt (or lies on the beam line) | length, width, opacity |
 | `pulse` | bright dots travelling down the line | count, size, speed, gap, duration, texture |

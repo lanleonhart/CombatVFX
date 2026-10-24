@@ -211,6 +211,7 @@ namespace CombatVFX.Fx
                 bool known; FxRecipe r = FxShared.RecipeOf(__instance, out known);
                 if (r != null && r.components != null && r.components.Count > 0) FxTweaks.Apply(__instance.projectile, "projectile", r.components);
                 else FxTweaks.Untweak(__instance.projectile);
+                if (r != null && r.baseSettings != null && r.baseSettings.HasBeamTaper) FxTweaks.ApplyBeamTaper(__instance.projectile, r.baseSettings);
             }
             catch (Exception e) { ModEntry.Log("[Fx] projectile tweaks: " + e.Message); }
         }

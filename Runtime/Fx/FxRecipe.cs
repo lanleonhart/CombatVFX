@@ -23,7 +23,31 @@ namespace CombatVFX.Fx
         public float impactTime = -1f;
         public string prefirePart = "", flashPart = "", impactPart = "", armorPart = "", structurePart = "";
         public bool matchColors = true;
-        public bool AnySet => preFireDuration >= 0f || projectileSpeed >= 0f || delayMin >= 0f || delayMax >= 0f || lightIntensity >= 0f || lightRadius >= 0f || pulseDelay >= 0f || spreadAngle >= 0f || shotDelay >= 0f || burstDelay >= 0f || firingInterval >= 0f || volleyInterval >= 0f || curveStrength >= 0f || curveFrequency >= 0 || impactTime >= 0f || prefirePart != "" || flashPart != "" || impactPart != "" || armorPart != "" || structurePart != "";
+        public float beamStart = -1f, beamEnd = -1f; public string beamShape = "linear";
+        public bool HasBeamTaper => beamStart >= 0f || beamEnd >= 0f;
+        public bool AnySet => preFireDuration >= 0f || projectileSpeed >= 0f || delayMin >= 0f || delayMax >= 0f || lightIntensity >= 0f || lightRadius >= 0f || pulseDelay >= 0f || spreadAngle >= 0f || shotDelay >= 0f || burstDelay >= 0f || firingInterval >= 0f || volleyInterval >= 0f || curveStrength >= 0f || curveFrequency >= 0 || impactTime >= 0f || prefirePart != "" || flashPart != "" || impactPart != "" || armorPart != "" || structurePart != "" || beamStart >= 0f || beamEnd >= 0f;
+        /// <summary>A width curve along a beam: the width at the muzzle and at the target as fractions, with a shape between them.</summary>
+        public static AnimationCurve Taper(float start, float end, string shape)
+        {
+            var c = new AnimationCurve();
+            switch (shape)
+            {
+                case "smooth": c = AnimationCurve.EaseInOut(0f, start, 1f, end); break;
+                case "needle": c.AddKey(new Keyframe(0f, start, 0f, 0f)); c.AddKey(new Keyframe(0.6f, start, 0f, 0f)); c.AddKey(new Keyframe(1f, end, 0f, 0f)); break;
+                case "bulge": c.AddKey(new Keyframe(0f, start, 0f, 0f)); c.AddKey(new Keyframe(0.5f, Mathf.Max(start, end) * 1.6f + 0.05f, 0f, 0f)); c.AddKey(new Keyframe(1f, end, 0f, 0f)); break;
+                default: c.AddKey(new Keyframe(0f, start)); c.AddKey(new Keyframe(1f, end)); break;
+            }
+            return c;
+        }
+
+        /// <summary>The stock width curve with a taper multiplied in, sampled along the beam.</summary>
+        public static AnimationCurve MultiplyCurve(AnimationCurve stock, AnimationCurve taper)
+        {
+            var c = new AnimationCurve();
+            for (int i = 0; i <= 12; i++) { float u = i / 12f; float s = stock != null && stock.length > 0 ? stock.Evaluate(u) : 1f; c.AddKey(new Keyframe(u, s * taper.Evaluate(u))); }
+            for (int i = 0; i < c.length; i++) c.SmoothTangents(i, 0f);
+            return c;
+        }
     }
 
     [Serializable]
@@ -67,6 +91,7 @@ namespace CombatVFX.Fx
         public string part = "flash";      // part: prefire, flash, impact, armor, structure, terrain, building
         public string tintMode = "stock";  // part, vfx and weapon: stock | recipe | custom
         public float sx = 1f, sy = 1f, sz = 1f;          // weapon: projectile scale
+        public float taperStart = 1f, taperEnd = 1f; public string taperShape = "linear";
         public bool withPrefire = true, withFlash = true, withImpact = true;
     }
 

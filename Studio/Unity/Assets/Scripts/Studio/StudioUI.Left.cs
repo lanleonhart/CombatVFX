@@ -132,7 +132,15 @@ namespace GNFX
             GUILayout.Space(8); GUILayout.Label("1b · BASE SETTINGS · the stock effect's own numbers and pieces" + (b.AnySet ? "  ·  changed" : ""), _cap);
             b.preFireDuration = Over("Pre-fire s", b.preFireDuration, st.preFireDuration, 0f, 3f);
             b.projectileSpeed = Over(st is LaserEffect ? "Beam time s" : "Speed m/s", b.projectileSpeed, st.projectileSpeed, st is LaserEffect ? 0.05f : 10f, st is LaserEffect ? 4f : 1500f);
-            var le = st as LaserEffect; if (le != null) { b.lightIntensity = Over("Light intensity", b.lightIntensity, le.lightIntensity, 0f, 8000000f); b.lightRadius = Over("Light radius m", b.lightRadius, le.lightRadius, 1f, 300f); }
+            var le = st as LaserEffect; if (le != null)
+            {
+                b.lightIntensity = Over("Light intensity", b.lightIntensity, le.lightIntensity, 0f, 8000000f); b.lightRadius = Over("Light radius m", b.lightRadius, le.lightRadius, 1f, 300f);
+                GUILayout.Label("Beam taper · width along the beam as a fraction of the stock width", _small);
+                b.beamStart = Over("At the muzzle ×", b.beamStart, 1f, 0f, 2f); b.beamEnd = Over("At the target ×", b.beamEnd, 1f, 0f, 2f);
+                GUILayout.BeginHorizontal(); GUILayout.Label("Shape", _small, GUILayout.Width(118));
+                foreach (string sh in new[] { "linear", "smooth", "needle", "bulge" }) if (GUILayout.Button(sh, b.beamShape == sh ? _btnOn : _btnSmall)) b.beamShape = sh;
+                GUILayout.EndHorizontal();
+            }
             var pe = st as PulseLaserEffect; if (pe != null) b.pulseDelay = Over("Pulse delay s", b.pulseDelay, pe.pulseDelay, 0f, 1f);
             var be = st as BallisticEffect; if (be != null) { b.spreadAngle = Over("Spread m", b.spreadAngle, be.spreadAngle, 0f, 20f); b.shotDelay = Over("Shot delay s", b.shotDelay, be.shotDelay, 0f, 1f); b.burstDelay = Over("Burst delay s", b.burstDelay, be.burstDelay, 0f, 1f); }
             var me = st as MissileLauncherEffect; if (me != null) { b.firingInterval = Over("Firing interval s", b.firingInterval, me.firingInterval, 0f, 1f); b.volleyInterval = Over("Volley interval s", b.volleyInterval, me.volleyInterval, 0f, 2f); b.curveStrength = Over("Curve strength", b.curveStrength, me.missileCurveStrength, 0f, 200f); b.curveFrequency = Mathf.RoundToInt(Over("Curve points", b.curveFrequency, me.missileCurveFrequency, 0f, 12f)); }
