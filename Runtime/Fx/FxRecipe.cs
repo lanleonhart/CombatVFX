@@ -65,7 +65,9 @@ namespace CombatVFX.Fx
         public string phase = "fire";      // fire | prefire
         public string effect = "";         // part: a stock effect id
         public string part = "flash";      // part: prefire, flash, impact, armor, structure, terrain, building
-        public string tintMode = "stock";  // part and vfx: stock | recipe | custom
+        public string tintMode = "stock";  // part, vfx and weapon: stock | recipe | custom
+        public float sx = 1f, sy = 1f, sz = 1f;          // weapon: projectile scale
+        public bool withPrefire = true, withFlash = true, withImpact = true;
     }
 
     [Serializable]
@@ -137,6 +139,7 @@ namespace CombatVFX.Fx
                     case "light": case "ring": case "orb": case "glow": case "scorch": case "arc": case "helix": case "vfx": case "part": case "shake": case "charge": e = s + l.duration; break;
                     case "smoke": case "embers": case "debris": case "casing": e = s + l.life * 1.4f + 0.3f; break;
                     case "pulse": e = s + l.duration + range / Mathf.Max(1f, l.speed); break;
+                    case "weapon": e = s + 0.4f + range / 300f + 1.2f; break;
                     case "spray": e = s + l.duration + l.life; break;
                     default: e = s; break;
                 }

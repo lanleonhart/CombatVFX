@@ -52,7 +52,8 @@ namespace GNFX
                 GUILayout.Label(Stock.Status ?? "", _small);
                 GUILayout.Space(8); GUILayout.Label("ANATOMY · what the game builds it from", _cap);
                 foreach (string line in Stock.Anatomy(_effect)) GUILayout.Label(line, _small);
-                GUILayout.Space(4); GUILayout.Label("Add a part to the current recipe (" + _recipe.name + "):", _small);
+                GUILayout.Space(4); GUILayout.Label("Add to the current recipe (" + _recipe.name + "):", _small);
+                if (GUILayout.Button("+ the whole effect as a layer", _btnSmall)) AddWeapon(_effect);
                 GUILayout.BeginHorizontal();
                 for (int i = 0; i < StockEffectPlayer.Parts.Length; i++)
                 {
@@ -113,6 +114,7 @@ namespace GNFX
         {
             switch (kind)
             {
+                case "weapon": return "A whole stock effect played as a layer, muzzle to target, with its own scale, colour and speed and with its pre-fire, flash and impact switchable. Stack them: a large laser inside a medium laser, the small one scaled down.";
                 case "part": return "One piece of a stock effect: its pre-fire charge, muzzle flash, impact (a random variation), armour, structure, terrain or building hit. Pre-fire parts play in the pre-fire phase, before the shot.";
                 case "beam": return "Three strips (core, body, glow) muzzle to target. Pulses repeat it; Jag breaks it into re-rolled segments.";
                 case "bolt": return "A mesh flying muzzle to target with glow strips. Arc lifts the path; Spread scatters each bolt.";

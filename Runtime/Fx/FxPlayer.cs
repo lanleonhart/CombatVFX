@@ -413,6 +413,13 @@ namespace CombatVFX.Fx
                     for (int i = 0; i < strands; i++) { o.Lines[i] = Line("helix", FxRecipe.Col(l.color, 0.8f), l.width); o.Lines[i].positionCount = 48; }
                     break;
                 }
+                case "weapon":
+                {
+                    if (string.IsNullOrEmpty(l.effect)) break;
+                    Color? tint = l.tintMode == "recipe" && _r != null ? _r.MatchColor : l.tintMode == "custom" ? FxRecipe.Col(l.color) : (Color?)null;
+                    FxStockShot.Play(l.effect, _m, _ip, new Vector3(l.sx, l.sy, l.sz), tint, l.speed > 0f ? l.speed : 1f, l.withPrefire, l.withFlash, l.withImpact, Mathf.Max(1, l.count));
+                    break;
+                }
                 case "vfx":
                 case "part":
                 {

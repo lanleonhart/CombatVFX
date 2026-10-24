@@ -9,13 +9,13 @@ namespace GNFX
 {
     public partial class StudioUI
     {
-        private static readonly string[] KINDS = { "beam", "bolt", "trail", "pulse", "helix", "arc", "flash", "glow", "orb", "charge", "spray", "casing", "burst", "ring", "scorch", "smoke", "embers", "debris", "part", "vfx", "light", "shake" };
+        private static readonly string[] KINDS = { "beam", "bolt", "trail", "pulse", "helix", "arc", "flash", "glow", "orb", "charge", "spray", "casing", "burst", "ring", "scorch", "smoke", "embers", "debris", "weapon", "part", "vfx", "light", "shake" };
         private static readonly string[][] KIND_GROUPS =
         {
             new[] { "Along the path", "beam", "bolt", "trail", "pulse", "helix", "arc" },
             new[] { "At the muzzle", "flash", "glow", "orb", "charge", "spray", "casing" },
             new[] { "At the impact", "burst", "ring", "scorch", "smoke", "embers", "debris" },
-            new[] { "From the game's own effects", "part", "vfx" },
+            new[] { "From the game's own effects", "weapon", "part", "vfx" },
             new[] { "Anywhere", "light", "shake" },
         };
         private static readonly Dictionary<string, string> KIND_NAMES = new Dictionary<string, string>
@@ -23,7 +23,7 @@ namespace GNFX
             { "beam", "Beam" }, { "bolt", "Bolt" }, { "trail", "Trail" }, { "pulse", "Pulses" }, { "helix", "Helix" }, { "arc", "Lightning" },
             { "flash", "Muzzle flash" }, { "glow", "Glow" }, { "orb", "Orb" }, { "charge", "Charge-up" }, { "spray", "Spray" }, { "casing", "Shell casings" },
             { "burst", "Impact burst" }, { "ring", "Shock ring" }, { "scorch", "Scorch mark" }, { "smoke", "Smoke" }, { "embers", "Embers" }, { "debris", "Debris" },
-            { "light", "Light" }, { "vfx", "Game VFX" }, { "part", "Game part" }, { "shake", "Camera shake" },
+            { "light", "Light" }, { "vfx", "Game VFX" }, { "part", "Game part" }, { "weapon", "Whole weapon effect" }, { "shake", "Camera shake" },
         };
         /// <summary>Timeline block colour per group: path, muzzle, impact, other.</summary>
         private static Color KindColor(string kind)
@@ -38,6 +38,7 @@ namespace GNFX
         private static F S(string k, string l, params string[] o) => new F { K = k, L = l, T = "select", O = o };
         private static F P(string k, string l) => new F { K = k, L = l, T = "prefab" };
         private static F E(string k, string l) => new F { K = k, L = l, T = "effect" };
+        private static F Bo(string k, string l) => new F { K = k, L = l, T = "bool" };
         private static readonly F PHASE = S("phase", "When", "fire", "prefire");
         private static readonly Dictionary<string, F[]> FIELDS = new Dictionary<string, F[]>
         {
@@ -47,6 +48,7 @@ namespace GNFX
             { "flash", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("count", "Particles", 4, 400), R("size", "Size m", 0.2f, 12), R("speed", "Speed m/s", 0, 80), R("spread", "Spread °", 0, 180), R("life", "Lifetime s", 0.05f, 3), S("texture", "Texture", "soft", "star", "spark", "ring") } },
             { "burst", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("count", "Particles", 4, 600), R("size", "Size m", 0.2f, 12), R("speed", "Speed m/s", 0, 120), R("gravity", "Gravity", 0, 60), R("life", "Lifetime s", 0.05f, 4), S("texture", "Texture", "soft", "star", "spark", "ring"), R("ring", "Shock ring m", 0, 40) } },
             { "light", new[] { R("start", "Start s", 0, 3), PHASE, C("color", "Colour"), S("anchor", "Where", "muzzle", "impact", "bolt"), R("intensity", "Intensity", 0, 40), R("radius", "Radius m", 5, 200), R("duration", "Duration s", 0.05f, 3) } },
+            { "weapon", new[] { R("start", "Start s", 0, 3), PHASE, E("effect", "Game effect"), R("count", "Shots", 1, 24), R("sx", "Scale x", 0.05f, 60), R("sy", "Scale y", 0.05f, 60), R("sz", "Scale z", 0.05f, 60), R("speed", "Speed ×", 0.1f, 5), S("tintMode", "Colour", "stock", "recipe", "custom"), C("color", "Custom colour"), Bo("withPrefire", "Its pre-fire"), Bo("withFlash", "Its muzzle flash"), Bo("withImpact", "Its impact") } },
             { "part", new[] { R("start", "Start s", 0, 3), PHASE, E("effect", "Game effect"), S("part", "Part", "prefire", "flash", "impact", "armor", "structure", "terrain", "building"), S("tintMode", "Colour", "stock", "recipe", "custom"), C("color", "Custom colour"), S("anchor", "Where", "muzzle", "impact", "ground", "bolt"), R("size", "Scale", 0.05f, 10), R("duration", "Lives s", 0.1f, 8), S("facing", "Facing", "beam", "flat") } },
             { "pulse", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("count", "Pulses", 1, 40), R("size", "Size m", 0.1f, 6), R("speed", "Speed m/s", 20, 1500), R("gap", "Gap s", 0.01f, 0.5f), R("duration", "Emit for s", 0.05f, 3), S("texture", "Texture", "soft", "star", "spark", "ring") } },
             { "helix", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("count", "Strands", 1, 6), R("width", "Width m", 0.05f, 2), R("radius", "Radius m", 0.1f, 12), R("turns", "Turns", 0.5f, 40), R("spin", "Spin r/s", 0, 10), R("duration", "Duration s", 0.05f, 3), S("reach", "Reach", "instant", "sweep"), S("fade", "Fade", "ease out", "linear", "hold", "pulse", "flicker") } },
@@ -149,6 +151,12 @@ namespace GNFX
                 string hex = (string)fi.GetValue(l) ?? "#ffffff";
                 string nh = ColorPicker(f.L, hex);
                 if (nh != hex) fi.SetValue(l, nh);
+            }
+            else if (f.T == "bool")
+            {
+                bool cur = (bool)fi.GetValue(l);
+                bool nv = GUILayout.Toggle(cur, " " + f.L, _label);
+                if (nv != cur) { fi.SetValue(l, nv); Fire(); }
             }
             else if (f.T == "effect")
             {

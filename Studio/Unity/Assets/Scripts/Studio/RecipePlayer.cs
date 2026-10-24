@@ -23,6 +23,7 @@ namespace GNFX
         public void Clear()
         {
             StopAllCoroutines(); Playing = false; TrackPos = null;
+            foreach (StockEffectPlayer h in _helpers) h.Clear(); _helperNext = 0;
             foreach (GameObject g in _spawned) if (g != null) Destroy(g);
             _spawned.Clear();
         }
@@ -205,6 +206,28 @@ namespace GNFX
 
         private Vector3 _m, _ip, _dir, _side; private float _range;
         private Recipe _recipe;
+        private readonly List<StockEffectPlayer> _helpers = new List<StockEffectPlayer>();   // one per weapon layer in flight
+        private int _helperNext;
+
+        /// <summary>A stock player for a weapon layer: the same code that plays the game's effects, with the layer's scale, colour and parts as its recipe.</summary>
+        private StockEffectPlayer Helper()
+        {
+            while (_helpers.Count <= _helperNext) { var h = gameObject.AddComponent<StockEffectPlayer>(); h.Assets = Assets; h.Spread = Stock != null ? Stock.Spread : 0f; h.Indirect = Stock != null && Stock.Indirect; h.ArmorVfx = Stock != null ? Stock.ArmorVfx : "none"; _helpers.Add(h); }
+            return _helpers[_helperNext++];
+        }
+
+        private static Recipe WeaponMods(Layer l, Recipe parent)
+        {
+            var m = new Recipe { scale = new Vector3(l.sx, l.sy, l.sz), speedMul = l.speed > 0f ? l.speed : 1f };
+            if (l.tintMode == "recipe" && parent != null) m.colors.AddRange(parent.colors);
+            else if (l.tintMode == "custom") m.colors.Add(new ColorEntry { C = l.color, I = 5f });
+            m.colorRule = "t0";
+            m.baseSettings.matchColors = m.colors.Count > 0;
+            if (!l.withPrefire) m.baseSettings.prefirePart = "none";
+            if (!l.withFlash) m.baseSettings.flashPart = "none";
+            if (!l.withImpact) { m.baseSettings.impactPart = "none"; m.baseSettings.armorPart = "none"; m.baseSettings.structurePart = "none"; }
+            return m;
+        }
         private Vector3 _shakeOffset;      // the stage camera re-places itself every frame, so the shake is added after it
 
         private Vector3 PathPoint(Layer l, int i, float d, Offs[] offs)
@@ -372,6 +395,14 @@ namespace GNFX
                     break;
                 }
                 case "shake": break;
+                case "weapon":
+                {
+                    if (string.IsNullOrEmpty(l.effect)) break;
+                    StockEffectPlayer h = Helper();
+                    h.Mods = WeaponMods(l, _recipe);
+                    h.Play(l.effect, _m, _ip, Mathf.Max(1, l.count), l.effect.Contains("MachineGun") ? 10 : 1);
+                    break;
+                }
             }
         }
 

@@ -84,12 +84,13 @@ start is counted from the impact moment, which the studio computes from the bolt
 ### From the game's own effects
 | Kind | What it draws | Main fields |
 |---|---|---|
+| `weapon` | a whole stock effect played as a layer, muzzle to target: its pre-fire, flash, projectile and impact, each switchable | effect, shots, scale x/y/z, speed, colour (stock / recipe / custom), with pre-fire / flash / impact |
 | `part` | one piece of a stock effect: its pre-fire charge, muzzle flash, impact (a random variation or a named one), armour hit, structure hit, terrain hit or building hit | effect (pick one of the 47), part, phase, colour (stock / recipe / custom), anchor, size (scale), duration, facing |
 | `vfx` | any of the game's vfx prefabs by name | prefab (type part of a name, pick from the list), colour (stock / recipe / custom), anchor, size (scale), duration, facing |
 
 In Game effects mode the Layer tab shows each stock effect's **anatomy** (pre-fire, flash, projectile, light, impact
 and its variations, armour / structure / terrain / building hits, sounds) with a button per part that adds it to the
-current recipe. So a recipe can take the large laser's charge, the PPC's flash and the AC/20's impact.
+current recipe, and one that adds the whole effect as a layer. So a recipe can take the large laser's charge, the PPC's flash and the AC/20's impact, or stack whole effects: a large laser inside a medium laser, one of them scaled.
 
 ### Anywhere
 | Kind | What it draws | Main fields |

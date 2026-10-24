@@ -82,6 +82,7 @@ namespace GNFX
         private string LayerLabel(Layer l)
         {
             if (l.kind == "part") return Pretty(l.effect) + " · " + PartLabel(l.part);
+            if (l.kind == "weapon") return Pretty(l.effect) + " · whole effect" + (Mathf.Abs(l.sx - 1f) > 0.01f || Mathf.Abs(l.sy - 1f) > 0.01f || Mathf.Abs(l.sz - 1f) > 0.01f ? " · scaled" : "");
             if (l.kind == "vfx") return string.IsNullOrEmpty(l.prefab) ? "Game VFX (none picked)" : Capital(ReadableVfx(l.prefab));
             return KIND_NAMES[l.kind];
         }
@@ -127,6 +128,14 @@ namespace GNFX
             return _vfxAll;
         }
 
+        private void AddWeapon(string effectId)
+        {
+            Layer l = Layer.New("weapon"); l.effect = effectId;
+            _recipe.layers.Add(l); _layer = _recipe.layers.Count - 1; _tab = 0;
+            Toast("Added " + Pretty(effectId) + " as a whole-effect layer to " + _recipe.name + (_mode == 0 ? " — see the Recipe tab" : ""));
+            Fire();
+        }
+
         private void AddVfx(string id)
         {
             Layer l = Layer.New("vfx"); l.prefab = id;
@@ -153,6 +162,7 @@ namespace GNFX
                 foreach (string e in _effects)
                 {
                     string name = Pretty(e);
+                    if ((name + " whole effect").IndexOf(_catFilter, StringComparison.OrdinalIgnoreCase) >= 0 && ++n <= 40 && GUILayout.Button("+ " + name + " · whole effect", _btn)) AddWeapon(e);
                     foreach (string[] p in PartsOf(e))
                     {
                         string label = name + " · " + p[1];
@@ -186,6 +196,7 @@ namespace GNFX
                 GUILayout.BeginHorizontal(); GUILayout.Space(24);
                 GUILayout.BeginVertical();
                 if (GUILayout.Button("Use as the recipe's base effect (its beam or projectile)", _btnSmall)) { _recipe.baseEffect = e; ApplyHint(); Fire(); }
+                if (GUILayout.Button("+ " + Pretty(e) + " · whole effect as a layer (scale and colour it on its own)", _btnSmall)) AddWeapon(e);
                 foreach (string[] p in parts) if (GUILayout.Button("+ " + Pretty(e) + " · " + p[1], _btnSmall)) AddPart(e, p[0]);
                 if (parts.Count == 0) GUILayout.Label("No separate pieces: this effect is only its projectile.", _small);
                 GUILayout.EndVertical();

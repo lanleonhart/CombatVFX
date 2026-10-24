@@ -79,7 +79,10 @@ namespace GNFX
         // part: a piece of one of the game's own effects
         public string effect = "";         // a stock effect id, e.g. WeaponEffect-Weapon_Laser_Large
         public string part = "flash";      // prefire, flash, impact, armor, structure, terrain, building
-        public string tintMode = "stock";  // part and vfx: stock | recipe (the colour table) | custom (this layer's colour)
+        public string tintMode = "stock";  // part, vfx and weapon: stock | recipe (the colour table) | custom (this layer's colour)
+        // weapon: a whole stock effect as a layer
+        public float sx = 1f, sy = 1f, sz = 1f;          // projectile scale, as CAC's ProjectileScale
+        public bool withPrefire = true, withFlash = true, withImpact = true;
 
         public Layer Clone() => JsonUtility.FromJson<Layer>(JsonUtility.ToJson(this));
 
@@ -108,6 +111,7 @@ namespace GNFX
                 case "helix": l.color = "#7cf2c8"; l.count = 2; l.width = 0.25f; l.radius = 1.2f; l.turns = 6f; l.spin = 2f; l.duration = 0.6f; l.reach = "instant"; l.fade = "ease out"; break;
                 case "vfx": l.anchor = "impact"; l.size = 1f; l.duration = 2f; l.facing = "beam"; break;
                 case "part": l.anchor = "muzzle"; l.size = 1f; l.duration = 2f; l.facing = "beam"; l.part = "flash"; break;
+                case "weapon": l.effect = "WeaponEffect-Weapon_Laser_Medium"; l.speed = 1f; l.count = 1; l.tintMode = "stock"; break;
                 case "shake": l.anchor = "impact"; l.intensity = 4f; l.duration = 0.35f; break;
             }
             return l;
@@ -227,6 +231,7 @@ namespace GNFX
                     case "light": case "ring": case "orb": case "glow": case "scorch": case "arc": case "helix": case "vfx": case "part": case "shake": case "charge": e = s + l.duration; break;
                     case "smoke": case "embers": case "debris": case "casing": e = s + l.life * 1.4f + 0.3f; break;
                     case "pulse": e = s + l.duration + range / Mathf.Max(1f, l.speed); break;
+                    case "weapon": e = s + 0.4f + range / 300f + 1.2f; break;
                     case "spray": e = s + l.duration + l.life; break;
                     default: e = s; break;
                 }
