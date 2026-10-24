@@ -23,13 +23,13 @@ namespace CombatVFX.Fx
         private Vector3 _shakeOffset, _shakeApplied, _shakeCamPos; private bool _shakeOn;
         private List<FxRecipe.Item> _items = new List<FxRecipe.Item>();
 
-        /// <summary>Start a recipe between two points. Returns the player, or null when the recipe has nothing on.</summary>
-        public static FxPlayer Play(FxRecipe r, Vector3 muzzle, Vector3 target)
+        /// <summary>Start one phase of a recipe between two points ("prefire" during the weapon's charge-up, "fire" from the shot). Null when nothing is on.</summary>
+        public static FxPlayer Play(FxRecipe r, Vector3 muzzle, Vector3 target, string phase = "fire")
         {
-            if (r == null || !r.HasLayers) return null;
-            var go = new GameObject("CombatVFX_" + r.name);
+            if (r == null || !r.HasPhase(phase)) return null;
+            var go = new GameObject("CombatVFX_" + r.name + "_" + phase);
             var p = go.AddComponent<FxPlayer>();
-            p.StartCoroutine(p.Run(r, muzzle, target));
+            p.StartCoroutine(p.Run(r, muzzle, target, phase));
             Live++;
             return p;
         }
@@ -217,6 +217,13 @@ namespace CombatVFX.Fx
             }
         }
 
+        /// <summary>One piece of a stock effect (pre-fire, flash, impact...) as a pooled prefab, read off the effect's own prefab.</summary>
+        private GameObject PartPrefab(string effectId, string part)
+        {
+            string name = FxLibrary.PartName(effectId, part);
+            return string.IsNullOrEmpty(name) ? null : GamePrefab(name);
+        }
+
         /// <summary>One of the game's VFX prefabs from the DataManager pool; null when it is not loaded (FxLibrary asks for it at combat start).</summary>
         private GameObject GamePrefab(string id)
         {
@@ -280,11 +287,13 @@ namespace CombatVFX.Fx
             }
         }
 
-        private IEnumerator Run(FxRecipe r, Vector3 muzzle, Vector3 target)
+        private IEnumerator Run(FxRecipe r, Vector3 muzzle, Vector3 target, string phase)
         {
             _m = muzzle; _ip = target; _dir = (target - muzzle).normalized; _side = Vector3.Cross(_dir, Vector3.up).normalized; _range = Mathf.Max(1f, Vector3.Distance(muzzle, target));
             float impact, end;
             _items = r.Timeline(_range, out impact, out end);
+            _items.RemoveAll(it => (it.L.phase ?? "fire") != phase);
+            end = 0f; foreach (FxRecipe.Item it in _items) end = Mathf.Max(end, it.End);
             var live = new List<Obj>();
             foreach (FxRecipe.Item it in _items) live.Add(new Obj { It = it });
             float t = 0f;
@@ -403,8 +412,9 @@ namespace CombatVFX.Fx
                     break;
                 }
                 case "vfx":
+                case "part":
                 {
-                    GameObject go = GamePrefab(l.prefab);
+                    GameObject go = l.kind == "part" ? PartPrefab(l.effect, l.part) : GamePrefab(l.prefab);
                     if (go == null) break;
                     o.Thing = go;
                     go.transform.position = AnchorPos(l, 0f);
@@ -604,6 +614,7 @@ namespace CombatVFX.Fx
                     break;
                 }
                 case "vfx":
+                case "part":
                     if (o.Thing != null && l.anchor == "bolt") o.Thing.transform.position = AnchorPos(l, tl);
                     break;
                 case "shake":

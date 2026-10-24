@@ -48,6 +48,9 @@ namespace CombatVFX.Fx
         public string prefab = "";
         public float turns = 3f;
         public float rate = 20f;
+        public string phase = "fire";      // fire | prefire
+        public string effect = "";         // part: a stock effect id
+        public string part = "flash";      // part: prefire, flash, impact, armor, structure, terrain, building
     }
 
     [Serializable]
@@ -65,11 +68,13 @@ namespace CombatVFX.Fx
         public string sound = "";
         public string impactSound = "";
         public bool hideStock;
+        public float prefire = 0.5f;
         public List<FxLayer> layers = new List<FxLayer>();
 
         [NonSerialized] public string File;
 
         public bool HasLayers { get { foreach (FxLayer l in layers) if (l != null && l.on) return true; return false; } }
+        public bool HasPhase(string phase) { foreach (FxLayer l in layers) if (l != null && l.on && (l.phase ?? "fire") == phase) return true; return false; }
 
         public static FxRecipe Parse(string json)
         {
@@ -95,8 +100,8 @@ namespace CombatVFX.Fx
             {
                 if (!l.on) continue;
                 float s = l.start, e;
-                bool anchored = l.kind == "burst" || l.kind == "light" || l.kind == "ring" || l.kind == "orb" || l.kind == "glow" || l.kind == "scorch" || l.kind == "smoke" || l.kind == "embers" || l.kind == "debris" || l.kind == "vfx" || l.kind == "shake" || (l.kind == "arc" && l.reach == "fork");
-                if (anchored && (l.anchor == "impact" || l.anchor == "ground")) s += impact;
+                bool anchored = l.kind == "burst" || l.kind == "light" || l.kind == "ring" || l.kind == "orb" || l.kind == "glow" || l.kind == "scorch" || l.kind == "smoke" || l.kind == "embers" || l.kind == "debris" || l.kind == "vfx" || l.kind == "part" || l.kind == "shake" || (l.kind == "arc" && l.reach == "fork");
+                if (anchored && (l.phase ?? "fire") != "prefire" && (l.anchor == "impact" || l.anchor == "ground")) s += impact;
                 switch (l.kind)
                 {
                     case "beam": e = s + l.count * l.duration + (l.count - 1) * l.gap; break;
@@ -104,7 +109,7 @@ namespace CombatVFX.Fx
                     case "trail": e = Mathf.Max(s, impact) + 0.4f; break;
                     case "flash": e = s + l.life; break;
                     case "burst": e = s + l.life + 0.2f; break;
-                    case "light": case "ring": case "orb": case "glow": case "scorch": case "arc": case "helix": case "vfx": case "shake": case "charge": e = s + l.duration; break;
+                    case "light": case "ring": case "orb": case "glow": case "scorch": case "arc": case "helix": case "vfx": case "part": case "shake": case "charge": e = s + l.duration; break;
                     case "smoke": case "embers": case "debris": case "casing": e = s + l.life * 1.4f + 0.3f; break;
                     case "pulse": e = s + l.duration + range / Mathf.Max(1f, l.speed); break;
                     case "spray": e = s + l.duration + l.life; break;

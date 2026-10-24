@@ -59,6 +59,11 @@ namespace GNFX
         // helix, arc
         public float turns = 3f;
         public float rate = 20f;           // arc re-rolls per second
+        // when: "fire" (from the shot) or "prefire" (before it, during the weapon's charge-up)
+        public string phase = "fire";
+        // part: a piece of one of the game's own effects
+        public string effect = "";         // a stock effect id, e.g. WeaponEffect-Weapon_Laser_Large
+        public string part = "flash";      // prefire, flash, impact, armor, structure, terrain, building
 
         public Layer Clone() => JsonUtility.FromJson<Layer>(JsonUtility.ToJson(this));
 
@@ -86,6 +91,7 @@ namespace GNFX
                 case "spray": l.color = "#ff8a3d"; l.count = 300; l.size = 1.5f; l.speed = 60f; l.spread = 8f; l.life = 0.6f; l.duration = 0.8f; l.gravity = 2f; l.texture = "soft"; break;
                 case "helix": l.color = "#7cf2c8"; l.count = 2; l.width = 0.25f; l.radius = 1.2f; l.turns = 6f; l.spin = 2f; l.duration = 0.6f; l.reach = "instant"; l.fade = "ease out"; break;
                 case "vfx": l.anchor = "impact"; l.size = 1f; l.duration = 2f; l.facing = "beam"; break;
+                case "part": l.anchor = "muzzle"; l.size = 1f; l.duration = 2f; l.facing = "beam"; l.part = "flash"; break;
                 case "shake": l.anchor = "impact"; l.intensity = 4f; l.duration = 0.35f; break;
             }
             return l;
@@ -109,6 +115,7 @@ namespace GNFX
         public string sound = "";                                        // studio-only: recipes\sounds file played at the muzzle on fire
         public string impactSound = "";                                  // studio-only: played at the impact point
         public bool hideStock;                                           // in the game: hide the stock projectile when the layers replace it
+        public float prefire = 0.5f;                                     // length of the pre-fire phase when there is no base effect to take it from
         // drawn on top by the CombatVFX mod
         public List<Layer> layers = new List<Layer>();
 
@@ -124,11 +131,13 @@ namespace GNFX
         }
 
         /// <summary>How long the shot lasts from fire to the last layer's end, for the scrub bar; the base effect adds its flight.</summary>
-        public float Length(float range)
+        public float Length(float range, float pre = 0f)
         {
-            float impact, end; Timeline(range, out impact, out end);
-            return Mathf.Max(end, HasBase ? 1.6f : 0.5f);
+            float impact, end; Timeline(range, pre, out impact, out end);
+            return Mathf.Max(end, pre + (HasBase ? 1.6f : 0.5f));
         }
+
+        public bool HasPrefire { get { foreach (Layer l in layers) if (l != null && l.on && l.phase == "prefire") return true; return false; } }
 
         public static Recipe Parse(string json)
         {
@@ -168,20 +177,24 @@ namespace GNFX
         public struct Item { public Layer L; public float Start, End; }
 
         /// <summary>When each layer starts and ends after Fire, for a range in metres: bursts and impact lights wait for the bolt.</summary>
-        public List<Item> Timeline(float range, out float impact, out float end)
+        public List<Item> Timeline(float range, out float impact, out float end) { return Timeline(range, 0f, out impact, out end); }
+
+        /// <summary>Pre-fire layers run from 0; everything else is shifted by the pre-fire length, so the shot lands after the charge.</summary>
+        public List<Item> Timeline(float range, float pre, out float impact, out float end)
         {
-            impact = 0f;
+            impact = pre;
             bool anyBolt = false;
-            foreach (Layer l in layers) if (l.on && l.kind == "bolt") { anyBolt = true; impact = Mathf.Max(impact, l.start + range / Mathf.Max(1f, l.speed) + (l.count - 1) * l.gap); }
-            if (!anyBolt) foreach (Layer l in layers) if (l.on && l.kind == "beam") impact = Mathf.Max(impact, l.start + (l.reach == "sweep" ? Mathf.Min(0.25f, l.duration * 0.5f) : 0f));
+            foreach (Layer l in layers) if (l.on && l.kind == "bolt" && l.phase != "prefire") { anyBolt = true; impact = Mathf.Max(impact, pre + l.start + range / Mathf.Max(1f, l.speed) + (l.count - 1) * l.gap); }
+            if (!anyBolt) foreach (Layer l in layers) if (l.on && l.kind == "beam" && l.phase != "prefire") impact = Mathf.Max(impact, pre + l.start + (l.reach == "sweep" ? Mathf.Min(0.25f, l.duration * 0.5f) : 0f));
             var items = new List<Item>();
             end = 0f;
             foreach (Layer l in layers)
             {
                 if (!l.on) continue;
-                float s = l.start, e;
-                bool anchored = l.kind == "burst" || l.kind == "light" || l.kind == "ring" || l.kind == "orb" || l.kind == "glow" || l.kind == "scorch" || l.kind == "smoke" || l.kind == "embers" || l.kind == "debris" || l.kind == "vfx" || l.kind == "shake" || (l.kind == "arc" && l.reach == "fork");
-                if (anchored && (l.anchor == "impact" || l.anchor == "ground")) s += impact;
+                bool prefire = l.phase == "prefire";
+                float s = prefire ? l.start : pre + l.start, e;
+                bool anchored = l.kind == "burst" || l.kind == "light" || l.kind == "ring" || l.kind == "orb" || l.kind == "glow" || l.kind == "scorch" || l.kind == "smoke" || l.kind == "embers" || l.kind == "debris" || l.kind == "vfx" || l.kind == "part" || l.kind == "shake" || (l.kind == "arc" && l.reach == "fork");
+                if (anchored && !prefire && (l.anchor == "impact" || l.anchor == "ground")) s += impact - pre;
                 switch (l.kind)
                 {
                     case "beam": e = s + l.count * l.duration + (l.count - 1) * l.gap; break;
@@ -189,7 +202,7 @@ namespace GNFX
                     case "trail": e = Mathf.Max(s, impact) + 0.4f; break;
                     case "flash": e = s + l.life; break;
                     case "burst": e = s + l.life + 0.2f; break;
-                    case "light": case "ring": case "orb": case "glow": case "scorch": case "arc": case "helix": case "vfx": case "shake": case "charge": e = s + l.duration; break;
+                    case "light": case "ring": case "orb": case "glow": case "scorch": case "arc": case "helix": case "vfx": case "part": case "shake": case "charge": e = s + l.duration; break;
                     case "smoke": case "embers": case "debris": case "casing": e = s + l.life * 1.4f + 0.3f; break;
                     case "pulse": e = s + l.duration + range / Mathf.Max(1f, l.speed); break;
                     case "spray": e = s + l.duration + l.life; break;

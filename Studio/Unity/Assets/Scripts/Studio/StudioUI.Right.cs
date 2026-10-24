@@ -40,6 +40,17 @@ namespace GNFX
             {
                 GUILayout.Label("THIS EFFECT", _cap);
                 GUILayout.Label(Stock.Status ?? "", _small);
+                GUILayout.Space(8); GUILayout.Label("ANATOMY · what the game builds it from", _cap);
+                foreach (string line in Stock.Anatomy(_effect)) GUILayout.Label(line, _small);
+                GUILayout.Space(4); GUILayout.Label("Add a part to the current recipe (" + _recipe.name + "):", _small);
+                GUILayout.BeginHorizontal();
+                for (int i = 0; i < StockEffectPlayer.Parts.Length; i++)
+                {
+                    if (i == 4) { GUILayout.EndHorizontal(); GUILayout.BeginHorizontal(); }
+                    if (Stock.PartPrefab(_effect, StockEffectPlayer.Parts[i]) == null) continue;
+                    if (GUILayout.Button("+ " + StockEffectPlayer.PartNames[i], _btnSmall)) AddPart(_effect, StockEffectPlayer.Parts[i]);
+                }
+                GUILayout.EndHorizontal();
                 GUILayout.Space(8); GUILayout.Label("MAKE A RECIPE FROM IT", _cap);
                 if (GUILayout.Button("New recipe with this as its base", _btn)) { _recipe = new Recipe { name = (_effect ?? "").Replace("WeaponEffect-Weapon_", "").Replace("WeaponEffect-", "").Replace("_", " "), baseEffect = _effect }; _recipePath = null; _layer = -1; _solo = -1; _undo.Clear(); _redo.Clear(); MarkSaved(); _mode = 1; ApplyHint(); }
                 GUILayout.Space(8); GUILayout.Label("ASSETS", _cap);
@@ -66,13 +77,30 @@ namespace GNFX
             GUILayout.Space(6);
             GUILayout.Label("Pick a layer on the left to edit its fields, or drag a block on the timeline to move its start.", _small);
             GUILayout.Space(6);
-            GUILayout.Label("Shot length " + _recipe.Length(Rig.Range).ToString("0.0") + " s at " + Mathf.RoundToInt(Rig.Range) + " m.", _small);
+            GUILayout.Label("PRE-FIRE PHASE", _cap);
+            if (_recipe.HasBase) GUILayout.Label("Taken from the base effect: " + Pre().ToString("0.##") + " s. Layers set to \"prefire\" play in it; the shot comes after.", _small);
+            else _recipe.prefire = (float)Math.Round(Slider("Pre-fire length s", _recipe.prefire, 0f, 3f), 2);
+            GUILayout.Space(6);
+            GUILayout.Label("Shot length " + _recipe.Length(Rig.Range, Pre()).ToString("0.0") + " s at " + Mathf.RoundToInt(Rig.Range) + " m.", _small);
+        }
+
+        /// <summary>A Game part layer for one piece of a stock effect, anchored and phased the way the game plays it.</summary>
+        private void AddPart(string effectId, string part)
+        {
+            Layer l = Layer.New("part");
+            l.effect = effectId; l.part = part;
+            l.phase = part == "prefire" ? "prefire" : "fire";
+            l.anchor = part == "prefire" || part == "flash" ? "muzzle" : part == "terrain" ? "ground" : "impact";
+            l.duration = part == "prefire" ? Mathf.Max(0.3f, Stock.PrefireOf(effectId)) : 2f;
+            _recipe.layers.Add(l); _layer = _recipe.layers.Count - 1;
+            Toast("Added " + StockEffectPlayer.PartNames[Array.IndexOf(StockEffectPlayer.Parts, part)] + " of " + effectId.Replace("WeaponEffect-Weapon_", "") + " to " + _recipe.name + " — see the Recipe tab");
         }
 
         private static string LayerHelp(string kind)
         {
             switch (kind)
             {
+                case "part": return "One piece of a stock effect: its pre-fire charge, muzzle flash, impact (a random variation), armour, structure, terrain or building hit. Pre-fire parts play in the pre-fire phase, before the shot.";
                 case "beam": return "Three strips (core, body, glow) muzzle to target. Pulses repeat it; Jag breaks it into re-rolled segments.";
                 case "bolt": return "A mesh flying muzzle to target with glow strips. Arc lifts the path; Spread scatters each bolt.";
                 case "trail": return "Follows the first bolt; without a bolt it lies along the beam line.";

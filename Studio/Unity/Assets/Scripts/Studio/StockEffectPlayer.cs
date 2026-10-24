@@ -40,6 +40,75 @@ namespace GNFX
 
         private GameObject Track(GameObject g) { if (g != null) { _spawned.Add(g); ShaderFix.Apply(g); } return g; }
 
+        // ------------------------------------------------------------------ the parts of a stock effect
+
+        public static readonly string[] Parts = { "prefire", "flash", "impact", "armor", "structure", "terrain", "building" };
+        public static readonly string[] PartNames = { "Pre-fire (charge)", "Muzzle flash", "Impact", "Armour hit", "Structure hit", "Terrain hit", "Building hit" };
+
+        /// <summary>The effect script on a stock effect's prefab, without instantiating it.</summary>
+        public WeaponEffect Effect(string effectId)
+        {
+            GameObject prefab = Assets != null && !string.IsNullOrEmpty(effectId) ? Assets.Prefab(effectId) : null;
+            return prefab != null ? prefab.GetComponent<WeaponEffect>() : null;
+        }
+
+        /// <summary>The sub-effect a launcher fires (bullet or missile), which carries its own flash and impact.</summary>
+        private static WeaponEffect Sub(WeaponEffect fx)
+        {
+            var be = fx as BallisticEffect; if (be != null && be.bulletPrefab != null) return be.bulletPrefab.GetComponent<WeaponEffect>();
+            var me = fx as MissileLauncherEffect; if (me != null && me.MissilePrefab != null) return me.MissilePrefab.GetComponent<WeaponEffect>();
+            return null;
+        }
+
+        public float PrefireOf(string effectId) { WeaponEffect fx = Effect(effectId); return fx != null ? Mathf.Max(0f, fx.preFireDuration) : 0f; }
+
+        /// <summary>One part of a stock effect as a prefab: its pre-fire, muzzle flash, impact (a random variation), armour, structure, terrain or building hit.</summary>
+        public GameObject PartPrefab(string effectId, string part)
+        {
+            WeaponEffect fx = Effect(effectId);
+            if (fx == null) return null;
+            WeaponEffect sub = Sub(fx);
+            switch (part)
+            {
+                case "prefire": return fx.preFireVFXPrefab ?? sub?.preFireVFXPrefab;
+                case "flash": return fx.muzzleFlashVFXPrefab ?? sub?.muzzleFlashVFXPrefab;
+                case "impact":
+                {
+                    string baseName = !string.IsNullOrEmpty(fx.impactVFXBase) ? fx.impactVFXBase : sub?.impactVFXBase;
+                    string[] vars = !string.IsNullOrEmpty(fx.impactVFXBase) ? fx.impactVFXVariations : sub?.impactVFXVariations;
+                    if (string.IsNullOrEmpty(baseName)) return null;
+                    GameObject g = vars != null && vars.Length > 0 ? Assets.Prefab(baseName + "_" + vars[UnityEngine.Random.Range(0, vars.Length)]) : null;
+                    return g ?? Assets.Prefab(baseName);
+                }
+                case "armor": return Assets.Prefab(fx.armorDamageVFXName ?? sub?.armorDamageVFXName);
+                case "structure": return Assets.Prefab(fx.structureDamageVFXName ?? sub?.structureDamageVFXName);
+                case "terrain": { string b = fx.terrainHitVFXBase ?? sub?.terrainHitVFXBase; return Assets.Prefab(b) ?? Assets.Prefab(b + "_grass") ?? Assets.Prefab(b + "_dirt"); }
+                case "building": return Assets.Prefab(fx.buildingHitOverlayVFXName ?? sub?.buildingHitOverlayVFXName);
+            }
+            return null;
+        }
+
+        /// <summary>What a stock effect is made of, one line per part, for the anatomy panel.</summary>
+        public List<string> Anatomy(string effectId)
+        {
+            var lines = new List<string>();
+            WeaponEffect fx = Effect(effectId);
+            if (fx == null) { lines.Add("Not loaded."); return lines; }
+            WeaponEffect sub = Sub(fx);
+            lines.Add("Type: " + fx.GetType().Name + (sub != null ? " firing " + sub.GetType().Name : ""));
+            lines.Add("Pre-fire: " + Name(fx.preFireVFXPrefab ?? sub?.preFireVFXPrefab) + (fx.preFireDuration > 0f ? ", " + fx.preFireDuration.ToString("0.##") + " s" : "") + (string.IsNullOrEmpty(fx.preFireSFX) ? "" : ", sound " + fx.preFireSFX));
+            lines.Add("Muzzle flash: " + Name(fx.muzzleFlashVFXPrefab ?? sub?.muzzleFlashVFXPrefab));
+            lines.Add("Projectile: " + Name(fx.projectilePrefab ?? sub?.projectilePrefab) + (fx.projectileSpeed > 0f ? (fx is LaserEffect ? ", " + fx.projectileSpeed.ToString("0.##") + " s beam" : ", " + fx.projectileSpeed.ToString("0") + " m/s") : ""));
+            var le = fx as LaserEffect; if (le != null) lines.Add("Light: intensity " + le.lightIntensity.ToString("0") + ", radius " + le.lightRadius.ToString("0") + (string.IsNullOrEmpty(le.beamStartSFX) ? "" : ", sounds " + le.beamStartSFX + " / " + le.beamStopSFX));
+            string ib = !string.IsNullOrEmpty(fx.impactVFXBase) ? fx.impactVFXBase : sub?.impactVFXBase; string[] iv = !string.IsNullOrEmpty(fx.impactVFXBase) ? fx.impactVFXVariations : sub?.impactVFXVariations;
+            lines.Add("Impact: " + (ib ?? "none") + (iv != null && iv.Length > 0 ? " × " + iv.Length + " variations (" + string.Join(", ", iv) + ")" : ""));
+            lines.Add("Armour hit: " + (fx.armorDamageVFXName ?? sub?.armorDamageVFXName ?? "none") + "   Structure hit: " + (fx.structureDamageVFXName ?? sub?.structureDamageVFXName ?? "none"));
+            lines.Add("Terrain hit: " + (fx.terrainHitVFXBase ?? sub?.terrainHitVFXBase ?? "none") + "   Building hit: " + (fx.buildingHitOverlayVFXName ?? sub?.buildingHitOverlayVFXName ?? "none"));
+            return lines;
+        }
+
+        private static string Name(GameObject g) => g != null ? g.name : "none";
+
         /// <summary>The colour a stock effect's projectile carries in its materials' blackbody tint, normalised; null when it has none.</summary>
         public Color? ProjectileColor(string effectId)
         {

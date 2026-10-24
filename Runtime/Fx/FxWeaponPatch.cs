@@ -37,12 +37,13 @@ namespace CombatVFX.Fx
     {
         internal static readonly HashSet<int> NotOurs = new HashSet<int>();           // effect ids with no recipe (answered once)
         internal static readonly HashSet<int> Played = new HashSet<int>();            // effect ids already played this shot
+        internal static readonly HashSet<int> PrePlayed = new HashSet<int>();         // effect ids whose pre-fire phase has played this shot
         internal static readonly HashSet<int> Hidden = new HashSet<int>();            // effect ids whose stock projectile stays hidden
         internal static readonly HashSet<string> LoggedNames = new HashSet<string>();
 
         internal static void Clear()
         {
-            NotOurs.Clear(); Played.Clear(); Hidden.Clear(); LoggedNames.Clear();
+            NotOurs.Clear(); Played.Clear(); PrePlayed.Clear(); Hidden.Clear(); LoggedNames.Clear();
             foreach (FxPlayer p in UnityEngine.Object.FindObjectsOfType<FxPlayer>()) UnityEngine.Object.Destroy(p.gameObject);
             FxLibrary.CombatEnded();
         }
@@ -76,6 +77,12 @@ namespace CombatVFX.Fx
                 FxRecipe r = FxLibrary.ForWeapon(weapon);
                 if (r == null || !r.HasLayers) { FxShared.NotOurs.Add(id); return; }
                 var state = (WeaponEffect.WeaponEffectState)FxReflect.CurrentState.GetValue(__instance);
+                if (state == WeaponEffect.WeaponEffectState.PreFiring && r.HasPhase("prefire") && !FxShared.PrePlayed.Contains(id))
+                {
+                    FxShared.PrePlayed.Add(id);
+                    FxPlayer.Play(r, (Vector3)FxReflect.StartPos.GetValue(__instance), (Vector3)FxReflect.EndPos.GetValue(__instance), "prefire");
+                    return;
+                }
                 if (state != WeaponEffect.WeaponEffectState.Firing) return;
                 var projT = FxReflect.ProjectileTransform?.GetValue(__instance) as Transform;
                 if (projT != null && projT.gameObject.name.Contains("Dummy")) { FxShared.NotOurs.Add(id); return; }
@@ -83,7 +90,7 @@ namespace CombatVFX.Fx
                 Vector3 start = (Vector3)FxReflect.StartPos.GetValue(__instance);
                 Vector3 end = (Vector3)FxReflect.EndPos.GetValue(__instance);
                 if (r.hideStock && projT != null) { projT.gameObject.SetActive(false); FxShared.Hidden.Add(id); }
-                FxPlayer.Play(r, start, end);
+                FxPlayer.Play(r, start, end, "fire");
                 if (FxShared.LoggedNames.Add(r.name)) ModEntry.Log("[Fx] playing recipe '" + r.name + "' for " + (weapon.defId ?? "weapon") + (r.hideStock ? " (stock projectile hidden)" : "") + "; further shots of it are not logged");
             }
             catch (Exception e) { ModEntry.Log("[Fx] weapon effect: " + e.Message); }
@@ -96,7 +103,7 @@ namespace CombatVFX.Fx
         private static void Postfix(WeaponEffect __instance)
         {
             int id = __instance.GetInstanceID();
-            FxShared.Played.Remove(id); FxShared.Hidden.Remove(id);           // the effect object is pooled and fires again
+            FxShared.Played.Remove(id); FxShared.PrePlayed.Remove(id); FxShared.Hidden.Remove(id);           // the effect object is pooled and fires again
         }
     }
 
@@ -149,7 +156,7 @@ namespace CombatVFX.Fx
                 Vector3 start = actor.CurrentPosition + Vector3.up * 9f + actor.GameRep.transform.forward * 3f;
                 ICombatant target = hud.SelectionHandler?.ActiveState?.AllTargetedCombatants?.FirstOrDefault();
                 Vector3 end = target != null ? target.CurrentPosition + Vector3.up * 6f : start + actor.GameRep.transform.forward * 200f;
-                FxPlayer.Play(r, start, end);
+                FxPlayer.Play(r, start, end, "prefire"); FxPlayer.Play(r, start, end, "fire");
                 ModEntry.Log("[Fx] hotkey played '" + r.name + "' from " + actor.DisplayName + (target != null ? " to " + target.DisplayName : " 200 m ahead"));
             }
             catch (Exception e) { ModEntry.Log("[Fx] hotkey: " + e.Message); }

@@ -12,6 +12,7 @@ namespace GNFX
     {
         public Material Additive, Unlit, Blended, Lit;
         public GameAssets Assets;
+        public StockEffectPlayer Stock;      // resolves the parts of the game's own effects
         public Sounds Audio;
         public bool Playing;
         public Vector3? TrackPos;          // the first bolt in flight, for the follow camera
@@ -26,10 +27,10 @@ namespace GNFX
             _spawned.Clear();
         }
 
-        public void Play(Recipe r, Vector3 muzzle, Vector3 target)
+        public void Play(Recipe r, Vector3 muzzle, Vector3 target, float pre = 0f)
         {
             Clear();
-            StartCoroutine(Run(r, muzzle, target));
+            StartCoroutine(Run(r, muzzle, target, pre));
         }
 
         private GameObject Make(string name) { var g = new GameObject(name); _spawned.Add(g); return g; }
@@ -237,22 +238,23 @@ namespace GNFX
             }
         }
 
-        private IEnumerator Run(Recipe r, Vector3 muzzle, Vector3 target)
+        private IEnumerator Run(Recipe r, Vector3 muzzle, Vector3 target, float pre)
         {
             Playing = true;
             _m = muzzle; _ip = target; _dir = (target - muzzle).normalized; _side = Vector3.Cross(_dir, Vector3.up).normalized; _range = Vector3.Distance(muzzle, target);
             float impact, end;
-            List<Recipe.Item> items = r.Timeline(_range, out impact, out end);
+            List<Recipe.Item> items = r.Timeline(_range, pre, out impact, out end);
             CurrentItems = items;
             var live = new List<Live>();
             foreach (Recipe.Item it in items) live.Add(new Live { It = it });
             float t = 0f;
             Camera cam = Camera.main;
-            if (Audio != null) Audio.Play(r.sound, _m);
+            bool fireSounded = Audio == null || string.IsNullOrEmpty(r.sound);
             bool impactSounded = string.IsNullOrEmpty(r.impactSound);
             while (t <= end + 1f)
             {
                 _shakeOffset = Vector3.zero;
+                if (!fireSounded && t >= pre) { fireSounded = true; Audio.Play(r.sound, _m); }
                 if (!impactSounded && t >= impact) { impactSounded = true; Audio.Play(r.impactSound, _ip); }
                 foreach (Live o in live)
                 {
@@ -351,8 +353,9 @@ namespace GNFX
                     break;
                 }
                 case "vfx":
+                case "part":
                 {
-                    GameObject prefab = Assets != null && Assets.Ready && !string.IsNullOrEmpty(l.prefab) ? Assets.Prefab(l.prefab) : null;
+                    GameObject prefab = l.kind == "part" ? (Stock != null ? Stock.PartPrefab(l.effect, l.part) : null) : Assets != null && Assets.Ready && !string.IsNullOrEmpty(l.prefab) ? Assets.Prefab(l.prefab) : null;
                     if (prefab == null) break;
                     o.Obj = Instantiate(prefab); o.Obj.name = "vfx " + l.prefab; _spawned.Add(o.Obj);
                     ShaderFix.Apply(o.Obj);
@@ -564,6 +567,7 @@ namespace GNFX
                     break;
                 }
                 case "vfx":
+                case "part":
                     if (o.Obj != null && l.anchor == "bolt") o.Obj.transform.position = AnchorPos(l, tl);
                     break;
                 case "shake":

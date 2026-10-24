@@ -36,7 +36,7 @@ A recipe is a JSON file. The studio writes it; the CombatVFX mod reads it. Three
 3. **Layers** (`layers`): what CombatVFX draws on top, in order. `hideStock: true` hides the stock projectile in the
    game so the layers replace it (damage still flows through the stock effect).
 
-Also: `tags` (free text for the library), `sound` and `impactSound` (studio only).
+Also: `tags` (free text for the library), `prefire` (pre-fire phase length without a base), `sound` and `impactSound` (studio only).
 
 ## 3. The 21 layer kinds
 
@@ -73,12 +73,27 @@ start is counted from the impact moment, which the studio computes from the bolt
 | `embers` | glowing dots falling under gravity | anchor, count, size, speed, gravity, life |
 | `debris` | tumbling chunks thrown back toward the shooter | anchor, count, size, speed, spread, gravity, life |
 
+### From the game's own effects
+| Kind | What it draws | Main fields |
+|---|---|---|
+| `part` | one piece of a stock effect: its pre-fire charge, muzzle flash, impact (a random variation), armour hit, structure hit, terrain hit or building hit | effect (pick one of the 47), part, phase, anchor, size (scale), duration, facing |
+| `vfx` | any of the game's vfx prefabs by name | prefab (type part of a name, pick from the list), anchor, size (scale), duration, facing |
+
+In Game effects mode the Layer tab shows each stock effect's **anatomy** (pre-fire, flash, projectile, light, impact
+and its variations, armour / structure / terrain / building hits, sounds) with a button per part that adds it to the
+current recipe. So a recipe can take the large laser's charge, the PPC's flash and the AC/20's impact.
+
 ### Anywhere
 | Kind | What it draws | Main fields |
 |---|---|---|
 | `light` | a point light | anchor (muzzle / impact / bolt), intensity, radius, duration |
-| `vfx` | one of the game's own vfx prefabs | prefab (type part of a name, pick from the list), anchor, size (scale), duration, facing |
 | `shake` | camera shake | anchor (when: muzzle = on fire, impact = on hit), intensity, duration |
+
+### Phases
+Every layer has a `phase`: `fire` (the default, timed from the shot) or `prefire` (timed from the start of the weapon's
+charge-up, before the shot). The pre-fire length comes from the base effect's own pre-fire duration, or from the
+recipe's `prefire` setting when there is no base. In the game CombatVFX plays pre-fire layers when the weapon effect
+enters its pre-firing state and the rest when it fires. Parts added from a pre-fire are put in the pre-fire phase.
 
 Anchors: `muzzle`, `impact`, `ground` (under the impact), `bolt` (rides the first bolt). Fades: `ease out`, `linear`,
 `hold`, `pulse`, `flicker`, `in`. Textures: `soft`, `star`, `spark`, `ring`, `smoke`, `disc`.

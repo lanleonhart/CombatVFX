@@ -13,7 +13,8 @@ namespace GNFX
         private void Timeline(Rect r)
         {
             float x0 = r.x + 118f, x1 = r.xMax - 16f, width = x1 - x0;
-            float length = Mathf.Max(0.5f, _mode == 0 ? Playback.Length : Mathf.Max(_recipe.Length(Rig.Range), Playback.Now + 0.2f));
+            float pre = _mode == 0 ? 0f : Pre();
+            float length = Mathf.Max(0.5f, _mode == 0 ? Playback.Length : Mathf.Max(_recipe.Length(Rig.Range, pre), Playback.Now + 0.2f));
             float pps = width / length;
             GUI.Label(new Rect(r.x + 10, r.y + 6, 100, 18), "TIMELINE", _cap);
             GUI.Label(new Rect(r.x + 10, r.y + 24, 104, 18), Playback.Now.ToString("0.00") + " / " + length.ToString("0.0") + " s", _small);
@@ -30,16 +31,17 @@ namespace GNFX
             Event e = Event.current;
             // blocks
             float impact = 0f, end;
-            List<Recipe.Item> items = _mode == 0 ? new List<Recipe.Item>() : _recipe.Timeline(Rig.Range, out impact, out end);
+            List<Recipe.Item> items = _mode == 0 ? new List<Recipe.Item>() : _recipe.Timeline(Rig.Range, pre, out impact, out end);
             float blockY = r.y + 20f, blockH = 14f;
+            if (pre > 0f) { GUI.DrawTexture(new Rect(x0, r.y + 16, pre * pps, r.height - 22), Solid(new Color(1f, 1f, 1f, 0.05f))); GUI.Label(new Rect(x0 + 2, r.yMax - 18, 80, 14), "pre-fire", _small); }
             if (_mode != 0 && _recipe.HasBase)
             {
                 float flight = Mathf.Min(1.5f, 0.3f + Rig.Range / 300f);
-                var br = new Rect(x0, blockY, flight * pps, blockH);
+                var br = new Rect(x0 + pre * pps, blockY, flight * pps, blockH);
                 GUI.DrawTexture(br, Solid(new Color(0.5f, 0.5f, 0.45f, 0.5f)));
                 GUI.Label(new Rect(br.x + 4, br.y - 1, 240, 16), "base: " + _recipe.baseEffect.Replace("WeaponEffect-Weapon_", ""), _small);
                 GUI.Label(new Rect(x0 - 6, blockY + blockH - 2, 20, 14), "♪", _small);     // the game's pre-fire sound
-                GUI.Label(new Rect(x0 + flight * pps - 6, blockY + blockH - 2, 20, 14), "♪", _small);
+                GUI.Label(new Rect(br.xMax - 6, blockY + blockH - 2, 20, 14), "♪", _small);
                 blockY += blockH + 4f;
             }
             else if (_mode == 0)
@@ -68,7 +70,7 @@ namespace GNFX
                 if (e.type == EventType.MouseDrag)
                 {
                     Layer l = _recipe.layers[_dragLayer];
-                    float anchored = items.Find(it => it.L == l).Start - l.start;      // the impact wait, if the layer is anchored at the impact
+                    float anchored = items.Find(it => it.L == l).Start - l.start;      // the pre-fire shift and the impact wait
                     l.start = Mathf.Max(0f, (float)Math.Round((e.mousePosition.x - _dragOffset - x0) / pps - anchored, 2));
                     e.Use();
                 }

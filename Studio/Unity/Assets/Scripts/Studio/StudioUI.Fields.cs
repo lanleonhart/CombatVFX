@@ -9,25 +9,26 @@ namespace GNFX
 {
     public partial class StudioUI
     {
-        private static readonly string[] KINDS = { "beam", "bolt", "trail", "pulse", "helix", "arc", "flash", "glow", "orb", "charge", "spray", "casing", "burst", "ring", "scorch", "smoke", "embers", "debris", "light", "vfx", "shake" };
+        private static readonly string[] KINDS = { "beam", "bolt", "trail", "pulse", "helix", "arc", "flash", "glow", "orb", "charge", "spray", "casing", "burst", "ring", "scorch", "smoke", "embers", "debris", "part", "vfx", "light", "shake" };
         private static readonly string[][] KIND_GROUPS =
         {
             new[] { "Along the path", "beam", "bolt", "trail", "pulse", "helix", "arc" },
             new[] { "At the muzzle", "flash", "glow", "orb", "charge", "spray", "casing" },
             new[] { "At the impact", "burst", "ring", "scorch", "smoke", "embers", "debris" },
-            new[] { "Anywhere", "light", "vfx", "shake" },
+            new[] { "From the game's own effects", "part", "vfx" },
+            new[] { "Anywhere", "light", "shake" },
         };
         private static readonly Dictionary<string, string> KIND_NAMES = new Dictionary<string, string>
         {
             { "beam", "Beam" }, { "bolt", "Bolt" }, { "trail", "Trail" }, { "pulse", "Pulses" }, { "helix", "Helix" }, { "arc", "Lightning" },
             { "flash", "Muzzle flash" }, { "glow", "Glow" }, { "orb", "Orb" }, { "charge", "Charge-up" }, { "spray", "Spray" }, { "casing", "Shell casings" },
             { "burst", "Impact burst" }, { "ring", "Shock ring" }, { "scorch", "Scorch mark" }, { "smoke", "Smoke" }, { "embers", "Embers" }, { "debris", "Debris" },
-            { "light", "Light" }, { "vfx", "Game VFX" }, { "shake", "Camera shake" },
+            { "light", "Light" }, { "vfx", "Game VFX" }, { "part", "Game part" }, { "shake", "Camera shake" },
         };
         /// <summary>Timeline block colour per group: path, muzzle, impact, other.</summary>
         private static Color KindColor(string kind)
         {
-            for (int g = 0; g < KIND_GROUPS.Length; g++) if (Array.IndexOf(KIND_GROUPS[g], kind) > 0) return g == 0 ? new Color(0.95f, 0.55f, 0.15f) : g == 1 ? new Color(0.95f, 0.85f, 0.3f) : g == 2 ? new Color(0.4f, 0.75f, 1f) : new Color(0.7f, 0.7f, 0.65f);
+            for (int g = 0; g < KIND_GROUPS.Length; g++) if (Array.IndexOf(KIND_GROUPS[g], kind) > 0) return g == 0 ? new Color(0.95f, 0.55f, 0.15f) : g == 1 ? new Color(0.95f, 0.85f, 0.3f) : g == 2 ? new Color(0.4f, 0.75f, 1f) : g == 3 ? new Color(0.75f, 0.5f, 1f) : new Color(0.7f, 0.7f, 0.65f);
             return Color.grey;
         }
 
@@ -36,6 +37,8 @@ namespace GNFX
         private static F C(string k, string l) => new F { K = k, L = l, T = "color" };
         private static F S(string k, string l, params string[] o) => new F { K = k, L = l, T = "select", O = o };
         private static F P(string k, string l) => new F { K = k, L = l, T = "prefab" };
+        private static F E(string k, string l) => new F { K = k, L = l, T = "effect" };
+        private static readonly F PHASE = S("phase", "When", "fire", "prefire");
         private static readonly Dictionary<string, F[]> FIELDS = new Dictionary<string, F[]>
         {
             { "beam", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), C("core", "Core"), R("width", "Width m", 0.05f, 6), R("glow", "Glow", 0, 6), R("duration", "Duration s", 0.05f, 3), S("fade", "Fade", "ease out", "linear", "hold", "pulse", "flicker"), S("reach", "Reach", "instant", "sweep"), R("count", "Pulses", 1, 8), R("gap", "Gap s", 0, 0.5f), R("jitter", "Jag m", 0, 8) } },
@@ -43,13 +46,14 @@ namespace GNFX
             { "trail", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("length", "Length m", 1, 120), R("width", "Width m", 0.05f, 4), R("opacity", "Opacity", 0, 1) } },
             { "flash", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("count", "Particles", 4, 400), R("size", "Size m", 0.2f, 12), R("speed", "Speed m/s", 0, 80), R("spread", "Spread °", 0, 180), R("life", "Lifetime s", 0.05f, 3), S("texture", "Texture", "soft", "star", "spark", "ring") } },
             { "burst", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("count", "Particles", 4, 600), R("size", "Size m", 0.2f, 12), R("speed", "Speed m/s", 0, 120), R("gravity", "Gravity", 0, 60), R("life", "Lifetime s", 0.05f, 4), S("texture", "Texture", "soft", "star", "spark", "ring"), R("ring", "Shock ring m", 0, 40) } },
-            { "light", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), S("anchor", "Where", "muzzle", "impact", "bolt"), R("intensity", "Intensity", 0, 40), R("radius", "Radius m", 5, 200), R("duration", "Duration s", 0.05f, 3) } },
+            { "light", new[] { R("start", "Start s", 0, 3), PHASE, C("color", "Colour"), S("anchor", "Where", "muzzle", "impact", "bolt"), R("intensity", "Intensity", 0, 40), R("radius", "Radius m", 5, 200), R("duration", "Duration s", 0.05f, 3) } },
+            { "part", new[] { R("start", "Start s", 0, 3), PHASE, E("effect", "Game effect"), S("part", "Part", "prefire", "flash", "impact", "armor", "structure", "terrain", "building"), S("anchor", "Where", "muzzle", "impact", "ground", "bolt"), R("size", "Scale", 0.05f, 10), R("duration", "Lives s", 0.1f, 8), S("facing", "Facing", "beam", "flat") } },
             { "pulse", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("count", "Pulses", 1, 40), R("size", "Size m", 0.1f, 6), R("speed", "Speed m/s", 20, 1500), R("gap", "Gap s", 0.01f, 0.5f), R("duration", "Emit for s", 0.05f, 3), S("texture", "Texture", "soft", "star", "spark", "ring") } },
             { "helix", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("count", "Strands", 1, 6), R("width", "Width m", 0.05f, 2), R("radius", "Radius m", 0.1f, 12), R("turns", "Turns", 0.5f, 40), R("spin", "Spin r/s", 0, 10), R("duration", "Duration s", 0.05f, 3), S("reach", "Reach", "instant", "sweep"), S("fade", "Fade", "ease out", "linear", "hold", "pulse", "flicker") } },
             { "arc", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), C("core", "Core"), S("reach", "Path", "beam", "fork"), S("anchor", "Fork from", "muzzle", "impact", "bolt"), R("width", "Width m", 0.05f, 3), R("glow", "Glow", 0, 6), R("jitter", "Jag m", 0, 12), R("count", "Branches", 0, 12), R("length", "Branch m", 0.5f, 40), R("rate", "Re-roll /s", 1, 60), R("duration", "Duration s", 0.05f, 3), S("fade", "Fade", "flicker", "ease out", "linear", "hold", "pulse") } },
-            { "glow", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), S("anchor", "Where", "muzzle", "impact", "ground", "bolt"), R("size", "Size m", 0.2f, 30), R("glow", "Flicker", 0, 6), R("duration", "Duration s", 0.05f, 4), S("fade", "Fade", "ease out", "linear", "hold", "pulse", "flicker"), S("texture", "Texture", "soft", "star", "ring"), S("facing", "Facing", "camera", "flat", "beam") } },
-            { "orb", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), C("core", "Core"), S("anchor", "Where", "muzzle", "impact", "bolt"), R("size", "Size m", 0.1f, 20), R("glow", "Halo", 0, 6), R("duration", "Duration s", 0.05f, 4), S("fade", "Fade", "in", "ease out", "hold", "pulse", "flicker") } },
-            { "charge", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("count", "Particles", 4, 400), R("size", "Size m", 0.05f, 3), R("radius", "Gather from m", 0.5f, 30), R("duration", "Duration s", 0.1f, 3), S("texture", "Texture", "soft", "star", "spark") } },
+            { "glow", new[] { R("start", "Start s", 0, 3), PHASE, C("color", "Colour"), S("anchor", "Where", "muzzle", "impact", "ground", "bolt"), R("size", "Size m", 0.2f, 30), R("glow", "Flicker", 0, 6), R("duration", "Duration s", 0.05f, 4), S("fade", "Fade", "ease out", "linear", "hold", "pulse", "flicker"), S("texture", "Texture", "soft", "star", "ring"), S("facing", "Facing", "camera", "flat", "beam") } },
+            { "orb", new[] { R("start", "Start s", 0, 3), PHASE, C("color", "Colour"), C("core", "Core"), S("anchor", "Where", "muzzle", "impact", "bolt"), R("size", "Size m", 0.1f, 20), R("glow", "Halo", 0, 6), R("duration", "Duration s", 0.05f, 4), S("fade", "Fade", "in", "ease out", "hold", "pulse", "flicker") } },
+            { "charge", new[] { R("start", "Start s", 0, 3), PHASE, C("color", "Colour"), R("count", "Particles", 4, 400), R("size", "Size m", 0.05f, 3), R("radius", "Gather from m", 0.5f, 30), R("duration", "Duration s", 0.1f, 3), S("texture", "Texture", "soft", "star", "spark") } },
             { "spray", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("count", "Particles", 10, 1500), R("size", "Size m", 0.1f, 8), R("speed", "Speed m/s", 5, 300), R("spread", "Cone °", 0, 60), R("life", "Lifetime s", 0.05f, 3), R("duration", "Emit for s", 0.05f, 3), R("gravity", "Gravity", 0, 40), S("texture", "Texture", "soft", "smoke", "star", "spark") } },
             { "casing", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), R("count", "Casings", 1, 40), R("size", "Size m", 0.03f, 1), R("speed", "Speed m/s", 1, 20), R("gap", "Gap s", 0.02f, 0.5f), R("gravity", "Gravity", 0, 40), R("life", "Lifetime s", 0.2f, 5) } },
             { "ring", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), S("anchor", "Where", "muzzle", "impact", "ground", "bolt"), R("size", "Radius m", 0.2f, 60), R("duration", "Duration s", 0.05f, 3), S("fade", "Fade", "ease out", "linear", "hold", "pulse"), S("facing", "Facing", "camera", "flat", "beam") } },
@@ -57,7 +61,7 @@ namespace GNFX
             { "smoke", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), S("anchor", "Where", "muzzle", "impact", "ground"), R("count", "Puffs", 1, 200), R("size", "Size m", 0.3f, 15), R("speed", "Rise m/s", 0, 20), R("life", "Lifetime s", 0.3f, 8), R("opacity", "Opacity", 0, 1) } },
             { "embers", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), S("anchor", "Where", "muzzle", "impact", "ground"), R("count", "Embers", 4, 400), R("size", "Size m", 0.05f, 2), R("speed", "Speed m/s", 0, 60), R("gravity", "Gravity", 0, 40), R("life", "Lifetime s", 0.2f, 6) } },
             { "debris", new[] { R("start", "Start s", 0, 3), C("color", "Colour"), S("anchor", "Where", "muzzle", "impact", "ground"), R("count", "Chunks", 1, 200), R("size", "Size m", 0.05f, 3), R("speed", "Speed m/s", 1, 80), R("spread", "Cone °", 5, 90), R("gravity", "Gravity", 0, 40), R("life", "Lifetime s", 0.2f, 6) } },
-            { "vfx", new[] { R("start", "Start s", 0, 3), P("prefab", "Game VFX"), S("anchor", "Where", "muzzle", "impact", "ground", "bolt"), R("size", "Scale", 0.05f, 10), R("duration", "Lives s", 0.1f, 8), S("facing", "Facing", "beam", "flat") } },
+            { "vfx", new[] { R("start", "Start s", 0, 3), PHASE, P("prefab", "Game VFX"), S("anchor", "Where", "muzzle", "impact", "ground", "bolt"), R("size", "Scale", 0.05f, 10), R("duration", "Lives s", 0.1f, 8), S("facing", "Facing", "beam", "flat") } },
             { "shake", new[] { R("start", "Start s", 0, 3), S("anchor", "When", "muzzle", "impact"), R("intensity", "Strength", 0, 20), R("duration", "Duration s", 0.05f, 2) } },
         };
 
@@ -137,6 +141,21 @@ namespace GNFX
                 string nh = ColorPicker(f.L, hex);
                 if (nh != hex) fi.SetValue(l, nh);
             }
+            else if (f.T == "effect")
+            {
+                // one of the game's 47 stock effects
+                string cur = (string)fi.GetValue(l) ?? "";
+                GUILayout.Label(f.L + "  ·  " + (string.IsNullOrEmpty(cur) ? "none" : cur.Replace("WeaponEffect-Weapon_", "").Replace("WeaponEffect-", "")), _small);
+                _effectFilter = GUILayout.TextField(_effectFilter, _field);
+                int n = 0;
+                foreach (string e in _effects)
+                {
+                    if (!string.IsNullOrEmpty(_effectFilter) && e.IndexOf(_effectFilter, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                    if (++n > 10) { GUILayout.Label("… type above to narrow the list", _small); break; }
+                    if (GUILayout.Button(e.Replace("WeaponEffect-Weapon_", "").Replace("WeaponEffect-", ""), e == cur ? _btnOn : _btn)) { fi.SetValue(l, e); Fire(); }
+                }
+                if (!string.IsNullOrEmpty(cur)) foreach (string line in Stock.Anatomy(cur)) GUILayout.Label(line, _small);
+            }
             else if (f.T == "prefab")
             {
                 string cur = (string)fi.GetValue(l) ?? "";
@@ -164,6 +183,6 @@ namespace GNFX
             }
         }
 
-        private string _prefabFilter = "";
+        private string _prefabFilter = "", _effectFilter = "";
     }
 }

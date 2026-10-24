@@ -40,6 +40,7 @@ namespace GNFX
             var audio = gameObject.AddComponent<Sounds>(); audio.Dir = Path.Combine(Config.recipesPath, "sounds");
             StockEffectPlayer stock = NewStock(), stock2 = NewStock();
             RecipePlayer recipes = NewRecipes(audio), recipes2 = NewRecipes(audio);
+            recipes.Stock = stock; recipes2.Stock = stock2;
             _rig.Follow = () => recipes.TrackPos ?? stock.TrackPos;
             PlaceDefaultMechs();
             Debug.Log("[Studio] mechs placed: " + _rig.ShooterId + " -> " + _rig.TargetId + ", muzzle " + _rig.Muzzle + ", impact " + _rig.Impact);

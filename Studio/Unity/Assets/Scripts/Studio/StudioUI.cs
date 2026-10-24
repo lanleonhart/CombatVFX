@@ -138,18 +138,22 @@ namespace GNFX
                 return;
             }
             Recipe r = _solo >= 0 && _solo < _recipe.layers.Count ? _recipe.Solo(_solo) : _recipe;
-            PlayRecipe(Stock, Recipes, r, Rig.Muzzle, Rig.Impact);
+            float pre = Pre();
+            PlayRecipe(Stock, Recipes, r, Rig.Muzzle, Rig.Impact, pre);
             Vector3 impact2 = Rig.Impact + new Vector3(-2.5f, 0f, 0f);
             if (_compare == 1 && r.HasBase) { Stock2.Mods = null; Stock2.Play(r.baseEffect, Rig.Muzzle2, impact2, DefaultShots(r.baseEffect), PerShot(r.baseEffect)); }
-            else if (_compare == 2 && _recipeB != null) PlayRecipe(Stock2, Recipes2, _recipeB, Rig.Muzzle2, impact2);
-            Playback.Fired(r.Length(Rig.Range));
+            else if (_compare == 2 && _recipeB != null) PlayRecipe(Stock2, Recipes2, _recipeB, Rig.Muzzle2, impact2, _recipeB.HasBase ? Stock.PrefireOf(_recipeB.baseEffect) : _recipeB.prefire);
+            Playback.Fired(r.Length(Rig.Range, pre));
         }
 
-        private static void PlayRecipe(StockEffectPlayer stock, RecipePlayer recipes, Recipe r, Vector3 muzzle, Vector3 impact)
+        /// <summary>The pre-fire phase length: the base effect's own, or the recipe's setting when there is no base.</summary>
+        private float Pre() => _recipe.HasBase ? Stock.PrefireOf(_recipe.baseEffect) : (_recipe.HasPrefire ? _recipe.prefire : 0f);
+
+        private static void PlayRecipe(StockEffectPlayer stock, RecipePlayer recipes, Recipe r, Vector3 muzzle, Vector3 impact, float pre)
         {
             stock.Mods = r;
             if (r.HasBase) stock.Play(r.baseEffect, muzzle, impact, DefaultShots(r.baseEffect), PerShot(r.baseEffect));
-            if (r.HasLayers) recipes.Play(r, muzzle, impact);
+            if (r.HasLayers) recipes.Play(r, muzzle, impact, pre);
         }
 
         private bool AnyPlaying => Stock.Playing || Recipes.Playing || Stock2.Playing || Recipes2.Playing;

@@ -106,11 +106,58 @@ namespace CombatVFX.Fx
             return best;
         }
 
-        /// <summary>Ask the DataManager for every game VFX prefab the recipes use, so the vfx layer finds them in the pool.</summary>
+        /// <summary>Ask the DataManager for every game VFX prefab the recipes use, so the vfx and part layers find them in the pool.</summary>
         internal static void PreloadPrefabs()
         {
             EnsureLoaded();
-            foreach (FxRecipe r in _recipes.Values) foreach (FxLayer l in r.layers) if (l.kind == "vfx" && !string.IsNullOrEmpty(l.prefab)) RequestPrefab(l.prefab);
+            foreach (FxRecipe r in _recipes.Values) foreach (FxLayer l in r.layers)
+            {
+                if (l.kind == "vfx" && !string.IsNullOrEmpty(l.prefab)) RequestPrefab(l.prefab);
+                if (l.kind == "part" && !string.IsNullOrEmpty(l.effect)) { RequestPrefab(l.effect); string n = PartName(l.effect, l.part); if (!string.IsNullOrEmpty(n)) RequestPrefab(n); }
+            }
+        }
+
+        private static readonly Dictionary<string, string> _partNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The prefab name of one part of a stock effect, read off the effect's prefab (pooled and returned); null until that prefab is loaded.</summary>
+        internal static string PartName(string effectId, string part)
+        {
+            if (string.IsNullOrEmpty(effectId)) return null;
+            string key = effectId + "|" + part, cached;
+            if (_partNames.TryGetValue(key, out cached)) return cached;
+            try
+            {
+                var dm = UnityGameInstance.BattleTechGame?.DataManager;
+                if (dm == null) return null;
+                UnityEngine.GameObject go = dm.PooledInstantiate(effectId, BattleTechResourceType.Prefab);
+                if (go == null) { RequestPrefab(effectId); return null; }
+                WeaponEffect fx = go.GetComponent<WeaponEffect>();
+                WeaponEffect sub = null;
+                var be = fx as BallisticEffect; if (be != null && be.bulletPrefab != null) sub = be.bulletPrefab.GetComponent<WeaponEffect>();
+                var me = fx as MissileLauncherEffect; if (me != null && me.MissilePrefab != null) sub = me.MissilePrefab.GetComponent<WeaponEffect>();
+                string name = null;
+                if (fx != null)
+                    switch (part)
+                    {
+                        case "prefire": name = (fx.preFireVFXPrefab ?? sub?.preFireVFXPrefab)?.name; break;
+                        case "flash": name = (fx.muzzleFlashVFXPrefab ?? sub?.muzzleFlashVFXPrefab)?.name; break;
+                        case "impact":
+                        {
+                            string b = !string.IsNullOrEmpty(fx.impactVFXBase) ? fx.impactVFXBase : sub?.impactVFXBase;
+                            string[] v = !string.IsNullOrEmpty(fx.impactVFXBase) ? fx.impactVFXVariations : sub?.impactVFXVariations;
+                            if (!string.IsNullOrEmpty(b)) name = v != null && v.Length > 0 ? b + "_" + v[UnityEngine.Random.Range(0, v.Length)] : b;
+                            break;
+                        }
+                        case "armor": name = fx.armorDamageVFXName ?? sub?.armorDamageVFXName; break;
+                        case "structure": name = fx.structureDamageVFXName ?? sub?.structureDamageVFXName; break;
+                        case "terrain": name = fx.terrainHitVFXBase ?? sub?.terrainHitVFXBase; break;
+                        case "building": name = fx.buildingHitOverlayVFXName ?? sub?.buildingHitOverlayVFXName; break;
+                    }
+                go.SetActive(false); dm.PoolGameObject(effectId, go);
+                if (part != "impact") _partNames[key] = name;          // impacts pick a variation each time
+                return string.IsNullOrEmpty(name) ? null : name;
+            }
+            catch (Exception e) { ModEntry.Log("[Fx] part " + part + " of " + effectId + ": " + e.Message); return null; }
         }
 
         internal static void RequestPrefab(string id)
@@ -129,7 +176,7 @@ namespace CombatVFX.Fx
             catch (Exception e) { ModEntry.Log("[Fx] prefab request " + id + ": " + e.Message); }
         }
 
-        internal static void CombatEnded() { _requested.Clear(); }
+        internal static void CombatEnded() { _requested.Clear(); _partNames.Clear(); }
     }
 
     [HarmonyPatch(typeof(CombatGameState), "_Init")]
