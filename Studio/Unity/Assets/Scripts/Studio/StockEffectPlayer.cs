@@ -61,6 +61,38 @@ namespace GNFX
         }
 
         public float PrefireOf(string effectId) { WeaponEffect fx = Effect(effectId); return fx != null ? Mathf.Max(0f, fx.preFireDuration) : 0f; }
+        public float PrefireOf(string effectId, Recipe r) { return r != null && r.baseSettings != null && r.baseSettings.preFireDuration >= 0f ? r.baseSettings.preFireDuration : PrefireOf(effectId); }
+
+        /// <summary>Write a recipe's base settings onto a spawned effect instance: its numbers, and its pieces swapped for another weapon's or switched off.</summary>
+        public void ApplyBase(WeaponEffect fx, Recipe r)
+        {
+            if (fx == null || r == null || r.baseSettings == null) return;
+            BaseSettings b = r.baseSettings;
+            if (b.preFireDuration >= 0f) fx.preFireDuration = b.preFireDuration;
+            if (b.projectileSpeed >= 0f) fx.projectileSpeed = b.projectileSpeed;
+            if (b.delayMin >= 0f) fx.attackSequenceNextDelayMin = b.delayMin;
+            if (b.delayMax >= 0f) fx.attackSequenceNextDelayMax = b.delayMax;
+            var le = fx as LaserEffect; if (le != null) { if (b.lightIntensity >= 0f) le.lightIntensity = b.lightIntensity; if (b.lightRadius >= 0f) le.lightRadius = b.lightRadius; }
+            var pe = fx as PulseLaserEffect; if (pe != null && b.pulseDelay >= 0f) pe.pulseDelay = b.pulseDelay;
+            var be = fx as BallisticEffect; if (be != null) { if (b.spreadAngle >= 0f) be.spreadAngle = b.spreadAngle; if (b.shotDelay >= 0f) be.shotDelay = b.shotDelay; if (b.burstDelay >= 0f) be.burstDelay = b.burstDelay; }
+            var me = fx as MissileLauncherEffect; if (me != null) { if (b.firingInterval >= 0f) me.firingInterval = b.firingInterval; if (b.volleyInterval >= 0f) me.volleyInterval = b.volleyInterval; if (b.curveStrength >= 0f) me.missileCurveStrength = b.curveStrength; if (b.curveFrequency >= 0) me.missileCurveFrequency = b.curveFrequency; }
+            var fe = fx as FlamerEffect; if (fe != null && b.impactTime >= 0f) fe.impactTime = b.impactTime;
+            if (b.prefirePart == "none") fx.preFireVFXPrefab = null; else if (b.prefirePart != "") { GameObject g = PartPrefab(b.prefirePart, "prefire"); if (g != null) fx.preFireVFXPrefab = g; }
+            if (b.flashPart == "none") fx.muzzleFlashVFXPrefab = null; else if (b.flashPart != "") { GameObject g = PartPrefab(b.flashPart, "flash"); if (g != null) fx.muzzleFlashVFXPrefab = g; }
+            if (b.impactPart == "none") { fx.impactVFXBase = ""; fx.impactVFXVariations = null; }
+            else if (b.impactPart != "")
+            {
+                string[] pick = b.impactPart.Split('|');
+                WeaponEffect other = Effect(pick[0]); WeaponEffect os = other != null ? Sub(other) : null;
+                string ob = other != null && !string.IsNullOrEmpty(other.impactVFXBase) ? other.impactVFXBase : os?.impactVFXBase;
+                if (!string.IsNullOrEmpty(ob)) { fx.impactVFXBase = ob; fx.impactVFXVariations = pick.Length > 1 ? new[] { pick[1] } : (!string.IsNullOrEmpty(other.impactVFXBase) ? other.impactVFXVariations : os?.impactVFXVariations); }
+            }
+            if (b.armorPart == "none") fx.armorDamageVFXName = ""; else if (b.armorPart != "") { WeaponEffect o = Effect(b.armorPart); string n = o != null ? (o.armorDamageVFXName ?? Sub(o)?.armorDamageVFXName) : null; if (!string.IsNullOrEmpty(n)) fx.armorDamageVFXName = n; }
+            if (b.structurePart == "none") fx.structureDamageVFXName = ""; else if (b.structurePart != "") { WeaponEffect o = Effect(b.structurePart); string n = o != null ? (o.structureDamageVFXName ?? Sub(o)?.structureDamageVFXName) : null; if (!string.IsNullOrEmpty(n)) fx.structureDamageVFXName = n; }
+        }
+
+        /// <summary>The stock values of a base effect, for the base-settings panel's defaults.</summary>
+        public WeaponEffect Stock(string effectId) => Effect(effectId);
 
         /// <summary>The impact variation names of a stock effect (its own, or its bullet's or missile's), or null.</summary>
         public string[] ImpactVariations(string effectId) { WeaponEffect fx = Effect(effectId); if (fx == null) return null; WeaponEffect sub = Sub(fx); return !string.IsNullOrEmpty(fx.impactVFXBase) ? fx.impactVFXVariations : sub?.impactVFXVariations; }
@@ -157,6 +189,7 @@ namespace GNFX
             g.transform.position = pos;
             if ((lookAt - pos).sqrMagnitude > 0.001f) g.transform.LookAt(lookAt);
             g.SetActive(true);
+            if (Mods != null && Mods.baseSettings != null && Mods.baseSettings.matchColors && Mods.MatchColor.HasValue) Recolor.Apply(g, Mods.MatchColor.Value);
             PlayAll(g);
             return g;
         }
@@ -199,6 +232,7 @@ namespace GNFX
             inst.name = effectId; inst.transform.position = muzzle; inst.SetActive(true);
             WeaponEffect fx = inst.GetComponent<WeaponEffect>();
             if (fx == null) { Status = effectId + ": the prefab's effect script did not bind (no WeaponEffect component)"; Playing = false; yield break; }
+            ApplyBase(fx, Mods);
             Status = fx.GetType().Name + " · " + (fx.projectilePrefab != null ? fx.projectilePrefab.name : "no projectile") + " · impact " + (string.IsNullOrEmpty(fx.impactVFXBase) ? "none" : fx.impactVFXBase);
 
             if (fx is LaserEffect) yield return Laser((LaserEffect)fx, inst, muzzle, target, shots);

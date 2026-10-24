@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using BattleTech;
+using BattleTech.Data;
 using BattleTech.UI;
 using HarmonyLib;
 using UnityEngine;
@@ -40,10 +41,28 @@ namespace CombatVFX.Fx
         internal static readonly HashSet<int> PrePlayed = new HashSet<int>();         // effect ids whose pre-fire phase has played this shot
         internal static readonly HashSet<int> Hidden = new HashSet<int>();            // effect ids whose stock projectile stays hidden
         internal static readonly HashSet<string> LoggedNames = new HashSet<string>();
+        private static readonly Dictionary<int, FxRecipe> _recipeOf = new Dictionary<int, FxRecipe>();
+
+        /// <summary>The recipe behind a weapon effect, remembered per effect instance; null (and remembered) when it has none.</summary>
+        internal static FxRecipe RecipeOf(WeaponEffect fx, out bool known)
+        {
+            int id = fx.GetInstanceID();
+            FxRecipe r;
+            if (_recipeOf.TryGetValue(id, out r)) { known = true; return r; }
+            FxReflect.Ensure();
+            Weapon weapon = FxReflect.Weapon?.GetValue(fx) as Weapon;
+            if (weapon == null) { known = false; return null; }
+            r = FxLibrary.ForWeapon(weapon);
+            _recipeOf[id] = r != null && r.Matters ? r : null;
+            known = true;
+            return _recipeOf[id];
+        }
+
+        internal static void ForgetRecipes() { _recipeOf.Clear(); }
 
         internal static void Clear()
         {
-            NotOurs.Clear(); Played.Clear(); PrePlayed.Clear(); Hidden.Clear(); LoggedNames.Clear();
+            NotOurs.Clear(); Played.Clear(); PrePlayed.Clear(); Hidden.Clear(); LoggedNames.Clear(); _recipeOf.Clear();
             foreach (FxPlayer p in UnityEngine.Object.FindObjectsOfType<FxPlayer>()) UnityEngine.Object.Destroy(p.gameObject);
             FxLibrary.CombatEnded();
         }
@@ -75,7 +94,7 @@ namespace CombatVFX.Fx
                 Weapon weapon = FxReflect.Weapon?.GetValue(__instance) as Weapon;
                 if (weapon == null) return;                                   // not known yet; ask again next frame
                 FxRecipe r = FxLibrary.ForWeapon(weapon);
-                if (r == null || !r.HasLayers) { FxShared.NotOurs.Add(id); return; }
+                if (r == null || !r.HasLayers) { FxShared.NotOurs.Add(id); return; }     // base settings and colour matching go through the Fire and PlayParts patches
                 var state = (WeaponEffect.WeaponEffectState)FxReflect.CurrentState.GetValue(__instance);
                 if (state == WeaponEffect.WeaponEffectState.PreFiring && r.HasPhase("prefire") && !FxShared.PrePlayed.Contains(id))
                 {
@@ -94,6 +113,73 @@ namespace CombatVFX.Fx
                 if (FxShared.LoggedNames.Add(r.name)) ModEntry.Log("[Fx] playing recipe '" + r.name + "' for " + (weapon.defId ?? "weapon") + (r.hideStock ? " (stock projectile hidden)" : "") + "; further shots of it are not logged");
             }
             catch (Exception e) { ModEntry.Log("[Fx] weapon effect: " + e.Message); }
+        }
+    }
+
+    /// <summary>As a weapon effect fires: write the recipe's base settings onto it (numbers, swapped pieces) before the game reads them.</summary>
+    [HarmonyPatch]
+    internal static class WeaponEffect_Fire_Fx
+    {
+        private static IEnumerable<MethodBase> TargetMethods()
+        {
+            foreach (Type t in typeof(WeaponEffect).Assembly.GetTypes())
+            {
+                if (!typeof(WeaponEffect).IsAssignableFrom(t)) continue;
+                MethodInfo m = t.GetMethod("Fire", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly, null, new[] { typeof(WeaponHitInfo), typeof(int), typeof(int) }, null);
+                if (m != null) yield return m;
+            }
+        }
+
+        private static void Prefix(WeaponEffect __instance)
+        {
+            try
+            {
+                bool known; FxRecipe r = FxShared.RecipeOf(__instance, out known);
+                if (r != null && r.baseSettings != null && r.baseSettings.AnySet) FxLibrary.ApplyBase(__instance, r);
+            }
+            catch (Exception e) { ModEntry.Log("[Fx] fire: " + e.Message); }
+        }
+    }
+
+    /// <summary>Around the game's own pre-fire, flash and impact spawns: tell the pooled spawn which colour to take.</summary>
+    [HarmonyPatch]
+    internal static class WeaponEffect_PlayParts_Fx
+    {
+        private static IEnumerable<MethodBase> TargetMethods()
+        {
+            foreach (Type t in typeof(WeaponEffect).Assembly.GetTypes())
+            {
+                if (!typeof(WeaponEffect).IsAssignableFrom(t)) continue;
+                foreach (string name in new[] { "PlayPreFire", "PlayMuzzleFlash", "PlayImpact", "PlayImpactDamageOverlay" })
+                {
+                    MethodInfo m = t.GetMethod(name, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly, null, Type.EmptyTypes, null);
+                    if (m != null) yield return m;
+                }
+            }
+        }
+
+        private static void Prefix(WeaponEffect __instance)
+        {
+            try
+            {
+                bool known; FxRecipe r = FxShared.RecipeOf(__instance, out known);
+                FxRecolor.Pending = r != null && r.baseSettings != null && r.baseSettings.matchColors ? r.MatchColor : null;
+            }
+            catch { FxRecolor.Pending = null; }
+        }
+
+        private static void Postfix() { FxRecolor.Pending = null; }
+    }
+
+    /// <summary>Every pooled spawn: tint it when a recipe asked for a colour, otherwise undo any tint left from an earlier shot.</summary>
+    [HarmonyPatch(typeof(DataManager), "PooledInstantiate", new[] { typeof(string), typeof(BattleTechResourceType), typeof(Vector3?), typeof(Quaternion?), typeof(Transform) })]
+    internal static class DataManager_PooledInstantiate_Fx
+    {
+        private static void Postfix(GameObject __result)
+        {
+            if (__result == null) return;
+            try { if (FxRecolor.Pending.HasValue) FxRecolor.Apply(__result, FxRecolor.Pending.Value); else FxRecolor.Untint(__result); }
+            catch { }
         }
     }
 

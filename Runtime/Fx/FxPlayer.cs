@@ -20,6 +20,7 @@ namespace CombatVFX.Fx
         private readonly List<GameObject> _spawned = new List<GameObject>();
         private readonly List<KeyValuePair<string, GameObject>> _pooled = new List<KeyValuePair<string, GameObject>>();
         private Vector3 _m, _ip, _dir, _side; private float _range;
+        private FxRecipe _r;
         private Vector3 _shakeOffset, _shakeApplied, _shakeCamPos; private bool _shakeOn;
         private List<FxRecipe.Item> _items = new List<FxRecipe.Item>();
 
@@ -289,6 +290,7 @@ namespace CombatVFX.Fx
 
         private IEnumerator Run(FxRecipe r, Vector3 muzzle, Vector3 target, string phase)
         {
+            _r = r;
             _m = muzzle; _ip = target; _dir = (target - muzzle).normalized; _side = Vector3.Cross(_dir, Vector3.up).normalized; _range = Mathf.Max(1f, Vector3.Distance(muzzle, target));
             float impact, end;
             _items = r.Timeline(_range, out impact, out end);
@@ -421,6 +423,8 @@ namespace CombatVFX.Fx
                     go.transform.rotation = l.facing == "beam" ? Quaternion.LookRotation(l.anchor == "muzzle" ? _dir : -_dir) : l.facing == "flat" ? Quaternion.identity : Quaternion.LookRotation(_dir);
                     go.transform.localScale = Vector3.one * Mathf.Max(0.05f, l.size);
                     go.SetActive(true);
+                    if (l.tintMode == "recipe" && _r != null && _r.MatchColor.HasValue) FxRecolor.Apply(go, _r.MatchColor.Value);
+                    else if (l.tintMode == "custom") FxRecolor.Apply(go, FxRecipe.Col(l.color));
                     foreach (ParticleSystem ps in go.GetComponentsInChildren<ParticleSystem>(true)) { ps.Stop(true); ps.Clear(true); ps.Play(true); }
                     break;
                 }

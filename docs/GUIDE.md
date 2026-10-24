@@ -33,7 +33,15 @@ A recipe is a JSON file. The studio writes it; the CombatVFX mod reads it. Three
      tint. Beams take it as is; bullet trails get CAC's brightening. PPCs and missiles are not recoloured by CAC.
    - `colorRule`: `t0`, `t1`, ... picks one entry; `Linear` and `Random` cycle the table at `colorSpeed`; `RandomOnce`.
    - `scale`: `{x, y, z}` projectile scale. `speedMul`: projectile speed multiplier.
-3. **Layers** (`layers`): what CombatVFX draws on top, in order. `hideStock: true` hides the stock projectile in the
+3. **Base settings** (`baseSettings`): the stock effect's own numbers and pieces, edited before anything is added on
+   top. Numbers default to the stock value and can be reset to it: pre-fire duration, projectile speed (beam time for
+   lasers), light intensity and radius (lasers), pulse delay, spread, shot and burst delay (ballistics), firing and
+   volley interval and missile curve (missiles), impact time (flamer), next-shot delays. Pieces: the pre-fire, muzzle
+   flash, impact, armour hit and structure hit can each stay stock, be switched off, or be another weapon's (an impact
+   can be one named variation). `matchColors` tints the pre-fire, flash and impact to the colour table's first colour
+   while keeping their own brightness, since CustomAmmoCategories recolours only the beam. In the game CombatVFX
+   writes these onto the weapon's effect the moment it fires and tints the spawned pieces as the game spawns them.
+4. **Layers** (`layers`): what CombatVFX draws on top, in order. `hideStock: true` hides the stock projectile in the
    game so the layers replace it (damage still flows through the stock effect).
 
 Also: `tags` (free text for the library), `prefire` (pre-fire phase length without a base), `sound` and `impactSound` (studio only).
@@ -76,8 +84,8 @@ start is counted from the impact moment, which the studio computes from the bolt
 ### From the game's own effects
 | Kind | What it draws | Main fields |
 |---|---|---|
-| `part` | one piece of a stock effect: its pre-fire charge, muzzle flash, impact (a random variation), armour hit, structure hit, terrain hit or building hit | effect (pick one of the 47), part, phase, anchor, size (scale), duration, facing |
-| `vfx` | any of the game's vfx prefabs by name | prefab (type part of a name, pick from the list), anchor, size (scale), duration, facing |
+| `part` | one piece of a stock effect: its pre-fire charge, muzzle flash, impact (a random variation or a named one), armour hit, structure hit, terrain hit or building hit | effect (pick one of the 47), part, phase, colour (stock / recipe / custom), anchor, size (scale), duration, facing |
+| `vfx` | any of the game's vfx prefabs by name | prefab (type part of a name, pick from the list), colour (stock / recipe / custom), anchor, size (scale), duration, facing |
 
 In Game effects mode the Layer tab shows each stock effect's **anatomy** (pre-fire, flash, projectile, light, impact
 and its variations, armour / structure / terrain / building hits, sounds) with a button per part that adds it to the

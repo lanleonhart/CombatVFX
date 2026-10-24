@@ -12,6 +12,20 @@ namespace CombatVFX.Fx
     [Serializable]
     public class FxColor { public string C = "#ffffff"; public float I = 1f; }
 
+    /// <summary>The stock effect's own numbers and pieces; -1 and "" mean "as the game has it".</summary>
+    [Serializable]
+    public class FxBase
+    {
+        public float preFireDuration = -1f, projectileSpeed = -1f, delayMin = -1f, delayMax = -1f;
+        public float lightIntensity = -1f, lightRadius = -1f, pulseDelay = -1f;
+        public float spreadAngle = -1f, shotDelay = -1f, burstDelay = -1f;
+        public float firingInterval = -1f, volleyInterval = -1f, curveStrength = -1f; public int curveFrequency = -1;
+        public float impactTime = -1f;
+        public string prefirePart = "", flashPart = "", impactPart = "", armorPart = "", structurePart = "";
+        public bool matchColors = true;
+        public bool AnySet => preFireDuration >= 0f || projectileSpeed >= 0f || delayMin >= 0f || delayMax >= 0f || lightIntensity >= 0f || lightRadius >= 0f || pulseDelay >= 0f || spreadAngle >= 0f || shotDelay >= 0f || burstDelay >= 0f || firingInterval >= 0f || volleyInterval >= 0f || curveStrength >= 0f || curveFrequency >= 0 || impactTime >= 0f || prefirePart != "" || flashPart != "" || impactPart != "" || armorPart != "" || structurePart != "";
+    }
+
     [Serializable]
     public class FxLayer
     {
@@ -51,6 +65,7 @@ namespace CombatVFX.Fx
         public string phase = "fire";      // fire | prefire
         public string effect = "";         // part: a stock effect id
         public string part = "flash";      // part: prefire, flash, impact, armor, structure, terrain, building
+        public string tintMode = "stock";  // part and vfx: stock | recipe | custom
     }
 
     [Serializable]
@@ -64,6 +79,7 @@ namespace CombatVFX.Fx
         public float colorSpeed;
         public Vector3 scale = Vector3.one;
         public float speedMul = 1f;
+        public FxBase baseSettings = new FxBase();
         public string tags = "";
         public string sound = "";
         public string impactSound = "";
@@ -74,6 +90,12 @@ namespace CombatVFX.Fx
         [NonSerialized] public string File;
 
         public bool HasLayers { get { foreach (FxLayer l in layers) if (l != null && l.on) return true; return false; } }
+
+        /// <summary>Anything for the game to do beyond CAC: layers, base settings, or a colour match with a colour table.</summary>
+        public bool Matters => HasLayers || (baseSettings != null && baseSettings.AnySet) || (baseSettings != null && baseSettings.matchColors && colors.Count > 0);
+
+        /// <summary>The colour the pre-fire, flash and impact are matched to: the first colour-table entry, normalised.</summary>
+        public Color? MatchColor { get { if (colors == null || colors.Count == 0) return null; Color c = Col(colors[0].C); float m = Mathf.Max(c.r, Mathf.Max(c.g, c.b)); return m > 0.001f ? new Color(c.r / m, c.g / m, c.b / m, 1f) : (Color?)null; } }
         public bool HasPhase(string phase) { foreach (FxLayer l in layers) if (l != null && l.on && (l.phase ?? "fire") == phase) return true; return false; }
 
         public static FxRecipe Parse(string json)
@@ -81,7 +103,10 @@ namespace CombatVFX.Fx
             FxRecipe r = JsonUtility.FromJson<FxRecipe>(json);
             if (r == null) throw new Exception("not a recipe");
             if (r.layers == null) r.layers = new List<FxLayer>();
+            if (r.baseSettings == null) r.baseSettings = new FxBase();
+            if (r.colors == null) r.colors = new List<FxColor>();
             r.layers.RemoveAll(l => l == null || string.IsNullOrEmpty(l.kind));
+            foreach (FxLayer l in r.layers) if (string.IsNullOrEmpty(l.tintMode)) l.tintMode = "stock";
             return r;
         }
 

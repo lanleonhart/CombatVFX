@@ -16,6 +16,21 @@ namespace GNFX
         public float I = 1f;             // intensity: the colour is multiplied by it (HDR)
     }
 
+    /// <summary>The stock effect's own numbers and pieces, each left at its stock value unless set (-1 and "" mean stock).</summary>
+    [Serializable]
+    public class BaseSettings
+    {
+        public float preFireDuration = -1f, projectileSpeed = -1f, delayMin = -1f, delayMax = -1f;
+        public float lightIntensity = -1f, lightRadius = -1f, pulseDelay = -1f;                 // lasers
+        public float spreadAngle = -1f, shotDelay = -1f, burstDelay = -1f;                      // ballistics
+        public float firingInterval = -1f, volleyInterval = -1f, curveStrength = -1f; public int curveFrequency = -1;   // missiles
+        public float impactTime = -1f;                                                           // flamer
+        public string prefirePart = "", flashPart = "", impactPart = "", armorPart = "", structurePart = "";   // "" stock, "none", or an effect id (impact: "effect|variation")
+        public bool matchColors = true;                                                          // tint pre-fire, flash and impact to the colour table
+
+        public bool AnySet => preFireDuration >= 0f || projectileSpeed >= 0f || delayMin >= 0f || delayMax >= 0f || lightIntensity >= 0f || lightRadius >= 0f || pulseDelay >= 0f || spreadAngle >= 0f || shotDelay >= 0f || burstDelay >= 0f || firingInterval >= 0f || volleyInterval >= 0f || curveStrength >= 0f || curveFrequency >= 0 || impactTime >= 0f || prefirePart != "" || flashPart != "" || impactPart != "" || armorPart != "" || structurePart != "";
+    }
+
     [Serializable]
     public class Layer
     {
@@ -64,6 +79,7 @@ namespace GNFX
         // part: a piece of one of the game's own effects
         public string effect = "";         // a stock effect id, e.g. WeaponEffect-Weapon_Laser_Large
         public string part = "flash";      // prefire, flash, impact, armor, structure, terrain, building
+        public string tintMode = "stock";  // part and vfx: stock | recipe (the colour table) | custom (this layer's colour)
 
         public Layer Clone() => JsonUtility.FromJson<Layer>(JsonUtility.ToJson(this));
 
@@ -110,6 +126,7 @@ namespace GNFX
         public float colorSpeed = 0f;                                    // ColorSpeedChange
         public Vector3 scale = Vector3.one;                              // ProjectileScale
         public float speedMul = 1f;                                      // ProjectileSpeedMultiplier
+        public BaseSettings baseSettings = new BaseSettings();           // the stock effect's own numbers and pieces
         // the recipe in the library and in the game
         public string tags = "";                                         // comma-separated, free text, for the library filter
         public string sound = "";                                        // studio-only: recipes\sounds file played at the muzzle on fire
@@ -137,6 +154,9 @@ namespace GNFX
             return Mathf.Max(end, pre + (HasBase ? 1.6f : 0.5f));
         }
 
+        /// <summary>The colour the pre-fire, flash and impact are matched to: the first colour-table entry, normalised.</summary>
+        public Color? MatchColor { get { if (colors == null || colors.Count == 0) return null; Color c = Col(colors[0].C); float m = Mathf.Max(c.r, Mathf.Max(c.g, c.b)); return m > 0.001f ? new Color(c.r / m, c.g / m, c.b / m, 1f) : (Color?)null; } }
+
         public bool HasPrefire { get { foreach (Layer l in layers) if (l != null && l.on && l.phase == "prefire") return true; return false; } }
 
         public static Recipe Parse(string json)
@@ -145,6 +165,8 @@ namespace GNFX
             if (r == null) throw new Exception("Not a recipe");
             if (r.layers == null) r.layers = new List<Layer>();
             if (r.colors == null) r.colors = new List<ColorEntry>();
+            if (r.baseSettings == null) r.baseSettings = new BaseSettings();
+            foreach (Layer l in r.layers) if (string.IsNullOrEmpty(l.tintMode)) l.tintMode = "stock";
             r.layers.RemoveAll(l => l == null || string.IsNullOrEmpty(l.kind));
             if (r.scale == Vector3.zero) r.scale = Vector3.one;
             if (string.IsNullOrEmpty(r.colorRule)) r.colorRule = "t0";

@@ -110,6 +110,7 @@ namespace CombatVFX.Fx
         internal static void PreloadPrefabs()
         {
             EnsureLoaded();
+            foreach (FxRecipe r in _recipes.Values) foreach (string e in new[] { r.baseSettings.prefirePart, r.baseSettings.flashPart, r.baseSettings.impactPart.Split('|')[0], r.baseSettings.armorPart, r.baseSettings.structurePart }) if (!string.IsNullOrEmpty(e) && e != "none") RequestPrefab(e);
             foreach (FxRecipe r in _recipes.Values) foreach (FxLayer l in r.layers)
             {
                 if (l.kind == "vfx" && !string.IsNullOrEmpty(l.prefab)) RequestPrefab(l.prefab);
@@ -180,6 +181,58 @@ namespace CombatVFX.Fx
         }
 
         internal static void CombatEnded() { _requested.Clear(); _partNames.Clear(); }
+
+        /// <summary>Read another stock effect's script off its pooled prefab, run an action on it, and pool it again.</summary>
+        internal static void WithEffect(string effectId, Action<WeaponEffect, WeaponEffect> use)
+        {
+            if (string.IsNullOrEmpty(effectId)) return;
+            try
+            {
+                var dm = UnityGameInstance.BattleTechGame?.DataManager;
+                if (dm == null) return;
+                UnityEngine.GameObject go = dm.PooledInstantiate(effectId, BattleTechResourceType.Prefab);
+                if (go == null) { RequestPrefab(effectId); return; }
+                WeaponEffect fx = go.GetComponent<WeaponEffect>(); WeaponEffect sub = null;
+                var be = fx as BallisticEffect; if (be != null && be.bulletPrefab != null) sub = be.bulletPrefab.GetComponent<WeaponEffect>();
+                var me = fx as MissileLauncherEffect; if (me != null && me.MissilePrefab != null) sub = me.MissilePrefab.GetComponent<WeaponEffect>();
+                if (fx != null) use(fx, sub);
+                go.SetActive(false); dm.PoolGameObject(effectId, go);
+            }
+            catch (Exception e) { ModEntry.Log("[Fx] effect " + effectId + ": " + e.Message); }
+        }
+
+        /// <summary>Write a recipe's base settings onto the weapon's effect as it fires: numbers, and pieces swapped for another weapon's or switched off.</summary>
+        internal static void ApplyBase(WeaponEffect fx, FxRecipe r)
+        {
+            if (fx == null || r == null || r.baseSettings == null || !r.baseSettings.AnySet) return;
+            FxBase b = r.baseSettings;
+            if (b.preFireDuration >= 0f) fx.preFireDuration = b.preFireDuration;
+            if (b.projectileSpeed >= 0f) fx.projectileSpeed = b.projectileSpeed;
+            if (b.delayMin >= 0f) fx.attackSequenceNextDelayMin = b.delayMin;
+            if (b.delayMax >= 0f) fx.attackSequenceNextDelayMax = b.delayMax;
+            var le = fx as LaserEffect; if (le != null) { if (b.lightIntensity >= 0f) le.lightIntensity = b.lightIntensity; if (b.lightRadius >= 0f) le.lightRadius = b.lightRadius; }
+            var pe = fx as PulseLaserEffect; if (pe != null && b.pulseDelay >= 0f) pe.pulseDelay = b.pulseDelay;
+            var ba = fx as BallisticEffect; if (ba != null) { if (b.spreadAngle >= 0f) ba.spreadAngle = b.spreadAngle; if (b.shotDelay >= 0f) ba.shotDelay = b.shotDelay; if (b.burstDelay >= 0f) ba.burstDelay = b.burstDelay; }
+            var ml = fx as MissileLauncherEffect; if (ml != null) { if (b.firingInterval >= 0f) ml.firingInterval = b.firingInterval; if (b.volleyInterval >= 0f) ml.volleyInterval = b.volleyInterval; if (b.curveStrength >= 0f) ml.missileCurveStrength = b.curveStrength; if (b.curveFrequency >= 0) ml.missileCurveFrequency = b.curveFrequency; }
+            var fl = fx as FlamerEffect; if (fl != null && b.impactTime >= 0f) fl.impactTime = b.impactTime;
+            if (b.prefirePart == "none") fx.preFireVFXPrefab = null; else if (b.prefirePart != "") WithEffect(b.prefirePart, (o, s) => { var g = o.preFireVFXPrefab ?? s?.preFireVFXPrefab; if (g != null) fx.preFireVFXPrefab = g; });
+            if (b.flashPart == "none") fx.muzzleFlashVFXPrefab = null; else if (b.flashPart != "") WithEffect(b.flashPart, (o, s) => { var g = o.muzzleFlashVFXPrefab ?? s?.muzzleFlashVFXPrefab; if (g != null) fx.muzzleFlashVFXPrefab = g; });
+            if (b.impactPart == "none") { fx.impactVFXBase = ""; fx.impactVFXVariations = null; }
+            else if (b.impactPart != "")
+            {
+                string[] pick = b.impactPart.Split('|');
+                WithEffect(pick[0], (o, s) =>
+                {
+                    string ob = !string.IsNullOrEmpty(o.impactVFXBase) ? o.impactVFXBase : s?.impactVFXBase;
+                    if (string.IsNullOrEmpty(ob)) return;
+                    fx.impactVFXBase = ob;
+                    fx.impactVFXVariations = pick.Length > 1 ? new[] { pick[1] } : (!string.IsNullOrEmpty(o.impactVFXBase) ? o.impactVFXVariations : s?.impactVFXVariations);
+                    if (fx.impactVFXVariations != null) foreach (string v in fx.impactVFXVariations) RequestPrefab(ob + "_" + v); else RequestPrefab(ob);
+                });
+            }
+            if (b.armorPart == "none") fx.armorDamageVFXName = ""; else if (b.armorPart != "") WithEffect(b.armorPart, (o, s) => { string n = o.armorDamageVFXName ?? s?.armorDamageVFXName; if (!string.IsNullOrEmpty(n)) { fx.armorDamageVFXName = n; RequestPrefab(n); } });
+            if (b.structurePart == "none") fx.structureDamageVFXName = ""; else if (b.structurePart != "") WithEffect(b.structurePart, (o, s) => { string n = o.structureDamageVFXName ?? s?.structureDamageVFXName; if (!string.IsNullOrEmpty(n)) { fx.structureDamageVFXName = n; RequestPrefab(n); } });
+        }
     }
 
     [HarmonyPatch(typeof(CombatGameState), "_Init")]

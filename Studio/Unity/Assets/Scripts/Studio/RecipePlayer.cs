@@ -204,6 +204,7 @@ namespace GNFX
         public struct Offs { public float Side, Up, EndSide, EndUp; }
 
         private Vector3 _m, _ip, _dir, _side; private float _range;
+        private Recipe _recipe;
         private Vector3 _shakeOffset;      // the stage camera re-places itself every frame, so the shake is added after it
 
         private Vector3 PathPoint(Layer l, int i, float d, Offs[] offs)
@@ -241,6 +242,7 @@ namespace GNFX
         private IEnumerator Run(Recipe r, Vector3 muzzle, Vector3 target, float pre)
         {
             Playing = true;
+            _recipe = r;
             _m = muzzle; _ip = target; _dir = (target - muzzle).normalized; _side = Vector3.Cross(_dir, Vector3.up).normalized; _range = Vector3.Distance(muzzle, target);
             float impact, end;
             List<Recipe.Item> items = r.Timeline(_range, pre, out impact, out end);
@@ -363,6 +365,8 @@ namespace GNFX
                     o.Obj.transform.rotation = l.facing == "beam" ? Quaternion.LookRotation(l.anchor == "muzzle" ? _dir : -_dir) : l.facing == "flat" ? Quaternion.identity : Quaternion.LookRotation(_dir);
                     o.Obj.transform.localScale = Vector3.one * Mathf.Max(0.05f, l.size);
                     o.Obj.SetActive(true);
+                    if (l.tintMode == "recipe" && _recipe != null && _recipe.MatchColor.HasValue) Recolor.Apply(o.Obj, _recipe.MatchColor.Value);
+                    else if (l.tintMode == "custom") Recolor.Apply(o.Obj, Recipe.Col(l.color));
                     foreach (ParticleSystem ps in o.Obj.GetComponentsInChildren<ParticleSystem>(true)) { ps.Stop(true); ps.Clear(true); ps.Play(true); }
                     foreach (BTLightAnimator la in o.Obj.GetComponentsInChildren<BTLightAnimator>(true)) { la.StopAnimation(); la.PlayAnimation(); }
                     break;
