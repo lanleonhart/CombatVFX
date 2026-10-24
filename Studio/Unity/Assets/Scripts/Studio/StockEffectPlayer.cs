@@ -91,6 +91,23 @@ namespace GNFX
             if (b.structurePart == "none") fx.structureDamageVFXName = ""; else if (b.structurePart != "") { WeaponEffect o = Effect(b.structurePart); string n = o != null ? (o.structureDamageVFXName ?? Sub(o)?.structureDamageVFXName) : null; if (!string.IsNullOrEmpty(n)) fx.structureDamageVFXName = n; }
         }
 
+        /// <summary>The prefab of one piece of a stock effect, for listing what is inside it: prefire, flash, projectile or impact (its first variation).</summary>
+        public GameObject PiecePrefab(string effectId, string piece)
+        {
+            if (piece == "projectile")
+            {
+                WeaponEffect fx = Effect(effectId); if (fx == null) return null;
+                WeaponEffect sub = Sub(fx);
+                return (sub != null && sub.projectilePrefab != null ? sub : fx).projectilePrefab;
+            }
+            if (piece == "impact")
+            {
+                string[] vars = ImpactVariations(effectId);
+                return PartPrefab(effectId, vars != null && vars.Length > 0 ? "impact:" + vars[0] : "impact");
+            }
+            return PartPrefab(effectId, piece);
+        }
+
         /// <summary>The stock values of a base effect, for the base-settings panel's defaults.</summary>
         public WeaponEffect Stock(string effectId) => Effect(effectId);
 
@@ -180,10 +197,11 @@ namespace GNFX
         }
 
         /// <summary>Instantiate a VFX prefab, aim it, and play every particle system and light animator on it.</summary>
-        private GameObject Spawn(GameObject prefab, Vector3 pos, Vector3 lookAt, Transform parent = null)
+        private GameObject Spawn(GameObject prefab, Vector3 pos, Vector3 lookAt, Transform parent = null, string piece = null)
         {
             if (prefab == null) return null;
             GameObject g = Track(Instantiate(prefab));
+            if (piece != null && Mods != null) ComponentTweaks.Apply(g, piece, Mods.components);
             g.name = prefab.name;
             g.transform.SetParent(parent, false);
             g.transform.position = pos;
@@ -212,7 +230,7 @@ namespace GNFX
             if (vars != null && vars.Length > 0) name = baseName + "_" + vars[UnityEngine.Random.Range(0, vars.Length)];
             GameObject prefab = Assets.Prefab(name) ?? Assets.Prefab(baseName);
             if (prefab == null) { Status = "No impact prefab " + name; return; }
-            Spawn(prefab, pos, from);
+            Spawn(prefab, pos, from, null, "impact");
             string extra = ArmorVfx == "armor" ? (fx.armorDamageVFXName ?? fallback?.armorDamageVFXName) : ArmorVfx == "structure" ? (fx.structureDamageVFXName ?? fallback?.structureDamageVFXName) : null;
             if (!string.IsNullOrEmpty(extra)) { GameObject p2 = Assets.Prefab(extra); if (p2 != null) Spawn(p2, pos, from); }
         }
@@ -270,11 +288,12 @@ namespace GNFX
                     light.transform.position = (muzzle + target) * 0.5f; light.length = Vector3.Distance(muzzle, target);
                 }
                 foreach (MeshRenderer mr in proj.GetComponentsInChildren<MeshRenderer>(true)) mr.gameObject.SetActive(true);
+                if (Mods != null) ComponentTweaks.Apply(proj, "projectile", Mods.components);
                 PlayAll(proj);
                 EffectMods.Apply(proj, Mods, fx.projectileSpeed > 0f ? fx.projectileSpeed : 1f);
-                Spawn(fx.preFireVFXPrefab, muzzle, target);
+                Spawn(fx.preFireVFXPrefab, muzzle, target, null, "prefire");
                 if (fx.preFireDuration > 0f) yield return new WaitForSeconds(fx.preFireDuration);
-                Spawn(fx.muzzleFlashVFXPrefab, muzzle, target);
+                Spawn(fx.muzzleFlashVFXPrefab, muzzle, target, null, "flash");
                 Impact(fx, null, target, muzzle);
                 float duration = fx.projectileSpeed > 0f ? fx.projectileSpeed : 1f;    // for lasers the game stores seconds here
                 float t = 0f;
@@ -297,9 +316,9 @@ namespace GNFX
         /// <summary>A projectile prefab from muzzle to target at the effect's speed; impact on arrival.</summary>
         private IEnumerator Projectile(WeaponEffect fx, GameObject projectilePrefab, GameObject flashPrefab, Vector3 muzzle, Vector3 target, WeaponEffect launcher)
         {
-            Spawn(fx.preFireVFXPrefab ?? launcher?.preFireVFXPrefab, muzzle, target);
+            Spawn(fx.preFireVFXPrefab ?? launcher?.preFireVFXPrefab, muzzle, target, null, "prefire");
             if (fx.preFireDuration > 0f) yield return new WaitForSeconds(fx.preFireDuration);
-            Spawn(flashPrefab, muzzle, target);
+            Spawn(flashPrefab, muzzle, target, null, "flash");
             if (projectilePrefab == null) { Impact(fx, launcher, target, muzzle); yield break; }
             GameObject proj = Track(Instantiate(projectilePrefab));
             proj.name = projectilePrefab.name; proj.transform.position = muzzle; proj.transform.LookAt(target); proj.SetActive(true);
@@ -307,6 +326,7 @@ namespace GNFX
             foreach (BTLight l in proj.GetComponentsInChildren<BTLight>(true)) l.gameObject.SetActive(true);
             PPCBranch[] branches = proj.GetComponentsInChildren<PPCBranch>(true);
             for (int i = 0; i < branches.Length; i++) { branches[i].gameObject.SetActive(true); branches[i].Init(3.3f + i * 1.7f); }
+            if (Mods != null) ComponentTweaks.Apply(proj, "projectile", Mods.components);
             PlayAll(proj);
             float speed = (fx.projectileSpeed > 0f ? fx.projectileSpeed : launcher != null && launcher.projectileSpeed > 0f ? launcher.projectileSpeed : 200f) * SpeedMul;
             float dist = Vector3.Distance(muzzle, target), duration = Mathf.Min(4f, dist / speed), t = 0f;
@@ -380,8 +400,8 @@ namespace GNFX
         private IEnumerator Flamer(FlamerEffect fx, Vector3 muzzle, Vector3 target)
         {
             GameObject prefab = fx.standardProjectilePrefab ?? fx.projectilePrefab;
-            Spawn(fx.muzzleFlashVFXPrefab, muzzle, target);
-            GameObject proj = Spawn(prefab, muzzle, target);
+            Spawn(fx.muzzleFlashVFXPrefab, muzzle, target, null, "flash");
+            GameObject proj = Spawn(prefab, muzzle, target, null, "projectile");
             float duration = fx.projectileSpeed > 0f && fx.projectileSpeed < 10f ? fx.projectileSpeed : 1.2f;
             EffectMods.Apply(proj, Mods, duration);
             yield return new WaitForSeconds(Mathf.Min(fx.impactTime, duration));
@@ -409,10 +429,11 @@ namespace GNFX
             _pending++;
             WeaponEffect eff = me != null ? (WeaponEffect)me : fx;
             GameObject projPrefab = eff.projectilePrefab ?? fx.projectilePrefab;
-            Spawn(eff.muzzleFlashVFXPrefab ?? fx.muzzleFlashVFXPrefab, muzzle, end);
+            Spawn(eff.muzzleFlashVFXPrefab ?? fx.muzzleFlashVFXPrefab, muzzle, end, null, "flash");
             if (projPrefab == null) { Impact(eff, fx, end, muzzle); _pending--; yield break; }
             GameObject proj = Track(Instantiate(projPrefab));
             proj.name = projPrefab.name; proj.transform.position = muzzle; proj.transform.LookAt(end); proj.SetActive(true);
+            if (Mods != null) ComponentTweaks.Apply(proj, "projectile", Mods.components);
             foreach (MeshRenderer mr in proj.GetComponentsInChildren<MeshRenderer>(true)) mr.gameObject.SetActive(true);
             PlayAll(proj);
             Vector3[] pts = MissilePath(fx, muzzle, end);

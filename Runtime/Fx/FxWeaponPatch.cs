@@ -158,17 +158,19 @@ namespace CombatVFX.Fx
             }
         }
 
-        private static void Prefix(WeaponEffect __instance)
+        private static void Prefix(WeaponEffect __instance, MethodBase __originalMethod)
         {
             try
             {
                 bool known; FxRecipe r = FxShared.RecipeOf(__instance, out known);
                 FxRecolor.Pending = r != null && r.baseSettings != null && r.baseSettings.matchColors ? r.MatchColor : null;
+                string piece = __originalMethod.Name == "PlayPreFire" ? "prefire" : __originalMethod.Name == "PlayMuzzleFlash" ? "flash" : "impact";
+                FxTweaks.Pending = r != null && r.components != null && r.components.Count > 0 ? r.components : null; FxTweaks.PendingPiece = piece;
             }
-            catch { FxRecolor.Pending = null; }
+            catch { FxRecolor.Pending = null; FxTweaks.Pending = null; }
         }
 
-        private static void Postfix() { FxRecolor.Pending = null; }
+        private static void Postfix() { FxRecolor.Pending = null; FxTweaks.Pending = null; }
     }
 
     /// <summary>Every pooled spawn: tint it when a recipe asked for a colour, otherwise undo any tint left from an earlier shot.</summary>
@@ -178,8 +180,39 @@ namespace CombatVFX.Fx
         private static void Postfix(GameObject __result)
         {
             if (__result == null) return;
-            try { if (FxRecolor.Pending.HasValue) FxRecolor.Apply(__result, FxRecolor.Pending.Value); else FxRecolor.Untint(__result); }
+            try
+            {
+                if (FxTweaks.Pending != null) FxTweaks.Apply(__result, FxTweaks.PendingPiece, FxTweaks.Pending); else FxTweaks.Untweak(__result);
+                if (FxRecolor.Pending.HasValue) FxRecolor.Apply(__result, FxRecolor.Pending.Value); else FxRecolor.Untint(__result);
+            }
             catch { }
+        }
+    }
+
+    /// <summary>After the game sets up its projectile for a shot: apply the recipe's projectile component tweaks to it.</summary>
+    [HarmonyPatch]
+    internal static class WeaponEffect_PlayProjectile_Fx
+    {
+        private static IEnumerable<MethodBase> TargetMethods()
+        {
+            foreach (Type t in typeof(WeaponEffect).Assembly.GetTypes())
+            {
+                if (!typeof(WeaponEffect).IsAssignableFrom(t)) continue;
+                MethodInfo m = t.GetMethod("PlayProjectile", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly, null, Type.EmptyTypes, null);
+                if (m != null) yield return m;
+            }
+        }
+
+        private static void Postfix(WeaponEffect __instance)
+        {
+            try
+            {
+                if (__instance.projectile == null) return;
+                bool known; FxRecipe r = FxShared.RecipeOf(__instance, out known);
+                if (r != null && r.components != null && r.components.Count > 0) FxTweaks.Apply(__instance.projectile, "projectile", r.components);
+                else FxTweaks.Untweak(__instance.projectile);
+            }
+            catch (Exception e) { ModEntry.Log("[Fx] projectile tweaks: " + e.Message); }
         }
     }
 

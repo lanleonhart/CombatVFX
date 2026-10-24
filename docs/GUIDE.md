@@ -41,6 +41,11 @@ A recipe is a JSON file. The studio writes it; the CombatVFX mod reads it. Three
    can be one named variation). `matchColors` tints the pre-fire, flash and impact to the colour table's first colour
    while keeping their own brightness, since CustomAmmoCategories recolours only the beam. In the game CombatVFX
    writes these onto the weapon's effect the moment it fires and tints the spawned pieces as the game spawns them.
+   **Components** (`components`): under Base settings, every particle system, line, trail and light inside the
+   effect's pre-fire, muzzle flash, projectile and impact prefabs is listed by name with what it does now (count,
+   size, lifetime, speed; width; light). Each can be switched off or given multipliers for size, lifetime, speed,
+   count, gravity, width and light, and a colour of its own. The game applies them to the pooled piece as it spawns
+   and to the effect's projectile as it is built, and restores the stock values when the pool hands the object on.
 4. **Layers** (`layers`): what CombatVFX draws on top, in order. `hideStock: true` hides the stock projectile in the
    game so the layers replace it (damage still flows through the stock effect).
 

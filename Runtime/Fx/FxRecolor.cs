@@ -83,8 +83,8 @@ namespace CombatVFX.Fx
         /// <summary>Undo a tint left on a pooled object from an earlier shot.</summary>
         public static void Untint(GameObject g)
         {
-            var mark = g != null ? g.GetComponent<FxTinted>() : null;
-            if (mark != null) mark.Restore();
+            if (g == null) return;
+            foreach (FxTinted mark in g.GetComponentsInChildren<FxTinted>(true)) mark.Restore();
         }
 
         public static ParticleSystem.MinMaxGradient ShiftGradient(ParticleSystem.MinMaxGradient g, Color target)

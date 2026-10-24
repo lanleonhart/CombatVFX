@@ -23,7 +23,10 @@ namespace GNFX
             Application.targetFrameRate = 120;
             try { if (File.Exists(SettingsPath)) Config = JsonUtility.FromJson<Settings>(File.ReadAllText(SettingsPath)) ?? new Settings(); } catch { }
             if (string.IsNullOrEmpty(Config.gamePath) || !File.Exists(Path.Combine(Config.gamePath, "BattleTech.exe"))) Config.gamePath = GameAssets.DetectGamePath() ?? Config.gamePath;
-            if (string.IsNullOrEmpty(Config.recipesPath)) Config.recipesPath = Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? ".", "recipes");
+            string defaultRecipes = Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? ".", "recipes");
+            // a recipes folder left over from where the studio used to live is not what anyone wants: come home unless the folder holds recipes of its own
+            if (string.IsNullOrEmpty(Config.recipesPath) || (!string.Equals(Path.GetFullPath(Config.recipesPath), Path.GetFullPath(defaultRecipes), StringComparison.OrdinalIgnoreCase) && (!Directory.Exists(Config.recipesPath) || Directory.GetFiles(Config.recipesPath, "*.json").Length == 0)))
+                Config.recipesPath = defaultRecipes;
             if (string.IsNullOrEmpty(Config.backdrop)) Config.backdrop = "dusk";
             if (string.IsNullOrEmpty(Config.camera)) Config.camera = "shoulder";
             Save();

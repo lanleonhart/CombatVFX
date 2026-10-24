@@ -82,6 +82,7 @@ namespace CombatVFX.Fx
         public Vector3 scale = Vector3.one;
         public float speedMul = 1f;
         public FxBase baseSettings = new FxBase();
+        public List<FxTweak> components = new List<FxTweak>();
         public string tags = "";
         public string sound = "";
         public string impactSound = "";
@@ -94,7 +95,7 @@ namespace CombatVFX.Fx
         public bool HasLayers { get { foreach (FxLayer l in layers) if (l != null && l.on) return true; return false; } }
 
         /// <summary>Anything for the game to do beyond CAC: layers, base settings, or a colour match with a colour table.</summary>
-        public bool Matters => HasLayers || (baseSettings != null && baseSettings.AnySet) || (baseSettings != null && baseSettings.matchColors && colors.Count > 0);
+        public bool Matters => HasLayers || (baseSettings != null && baseSettings.AnySet) || (baseSettings != null && baseSettings.matchColors && colors.Count > 0) || (components != null && components.Count > 0);
 
         /// <summary>The colour the pre-fire, flash and impact are matched to: the first colour-table entry, normalised.</summary>
         public Color? MatchColor { get { if (colors == null || colors.Count == 0) return null; Color c = Col(colors[0].C); float m = Mathf.Max(c.r, Mathf.Max(c.g, c.b)); return m > 0.001f ? new Color(c.r / m, c.g / m, c.b / m, 1f) : (Color?)null; } }
@@ -106,6 +107,8 @@ namespace CombatVFX.Fx
             if (r == null) throw new Exception("not a recipe");
             if (r.layers == null) r.layers = new List<FxLayer>();
             if (r.baseSettings == null) r.baseSettings = new FxBase();
+            if (r.components == null) r.components = new List<FxTweak>();
+            r.components.RemoveAll(t => t == null || t.IsStock);
             if (r.colors == null) r.colors = new List<FxColor>();
             r.layers.RemoveAll(l => l == null || string.IsNullOrEmpty(l.kind));
             foreach (FxLayer l in r.layers) if (string.IsNullOrEmpty(l.tintMode)) l.tintMode = "stock";

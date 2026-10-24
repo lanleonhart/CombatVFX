@@ -2,7 +2,9 @@
 // bottom in the order it fires: the base game effect, the CAC knobs on it, then the extra layers with on/solo/remove,
 // and the grouped buttons that add a layer.
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace GNFX
@@ -143,7 +145,69 @@ namespace GNFX
             b.armorPart = Piece("Armour hit", b.armorPart, "armor");
             b.structurePart = Piece("Structure hit", b.structurePart, "structure");
             b.matchColors = GUILayout.Toggle(b.matchColors, " Match pre-fire, flash and impact to the colour table", _label);
+            ComponentsPanel();
             if (b.AnySet && GUILayout.Button("Back to stock on everything", _btnSmall, GUILayout.Width(200))) _recipe.baseSettings = new BaseSettings { matchColors = b.matchColors };
+        }
+
+        private readonly HashSet<string> _compOpen = new HashSet<string>();
+        private readonly Dictionary<string, List<ComponentTweaks.Found>> _compCache = new Dictionary<string, List<ComponentTweaks.Found>>();
+
+        private static readonly string[] PIECES = { "prefire", "flash", "projectile", "impact" };
+        private static readonly string[] PIECE_NAMES = { "Pre-fire", "Muzzle flash", "Projectile", "Impact" };
+
+        private ComponentTweak TweakFor(string piece, string path, bool create)
+        {
+            foreach (ComponentTweak t in _recipe.components) if (t.piece == piece && t.path == path) return t;
+            if (!create) return null;
+            var n = new ComponentTweak { piece = piece, path = path }; _recipe.components.Add(n); return n;
+        }
+
+        /// <summary>Every particle system, line and light inside each piece of the base effect, each switchable and tunable.</summary>
+        private void ComponentsPanel()
+        {
+            GUILayout.Space(6); GUILayout.Label("Components inside the pieces", _small);
+            for (int p = 0; p < PIECES.Length; p++)
+            {
+                string piece = PIECES[p];
+                string key = _recipe.baseEffect + "|" + piece;
+                List<ComponentTweaks.Found> found;
+                if (!_compCache.TryGetValue(key, out found)) { found = ComponentTweaks.List(Stock.PiecePrefab(_recipe.baseEffect, piece)); _compCache[key] = found; }
+                if (found.Count == 0) continue;
+                int changed = _recipe.components.Count(t => t.piece == piece && !t.IsStock);
+                bool open = _compOpen.Contains(key);
+                if (GUILayout.Button((open ? "▾  " : "▸  ") + PIECE_NAMES[p] + "  ·  " + found.Count + " components" + (changed > 0 ? "  ·  " + changed + " changed" : ""), changed > 0 ? _btnOn : _btn)) { if (open) _compOpen.Remove(key); else _compOpen.Add(key); }
+                if (!open) continue;
+                foreach (ComponentTweaks.Found f in found)
+                {
+                    ComponentTweak t = TweakFor(piece, f.Path, false);
+                    string ckey = key + "|" + f.Path;
+                    bool copen = _compOpen.Contains(ckey);
+                    GUILayout.BeginHorizontal(); GUILayout.Space(12);
+                    bool on = GUILayout.Toggle(t == null || t.on, "", GUILayout.Width(18));
+                    if (on != (t == null || t.on)) { TweakFor(piece, f.Path, true).on = on; }
+                    if (GUILayout.Button((string.IsNullOrEmpty(f.Path) ? "(root)" : f.Path.Substring(f.Path.LastIndexOf('/') + 1)) + "  ·  " + f.Type + "  ·  " + f.Summary, t != null && !t.IsStock ? _btnOn : _btnSmall)) { if (copen) _compOpen.Remove(ckey); else _compOpen.Add(ckey); }
+                    GUILayout.EndHorizontal();
+                    if (!copen) continue;
+                    ComponentTweak e = TweakFor(piece, f.Path, true);
+                    GUILayout.BeginHorizontal(); GUILayout.Space(30); GUILayout.BeginVertical();
+                    if (f.Particle)
+                    {
+                        e.size = (float)Math.Round(Slider("Size ×", e.size, 0.1f, 5f), 2); e.life = (float)Math.Round(Slider("Lifetime ×", e.life, 0.1f, 5f), 2);
+                        e.speed = (float)Math.Round(Slider("Speed ×", e.speed, 0.1f, 5f), 2); e.count = (float)Math.Round(Slider("Count ×", e.count, 0.1f, 5f), 2);
+                        e.gravity = (float)Math.Round(Slider("Gravity ×", e.gravity, 0f, 5f), 2);
+                    }
+                    if (f.Line) e.width = (float)Math.Round(Slider("Width ×", e.width, 0.1f, 5f), 2);
+                    if (f.Light) e.intensity = (float)Math.Round(Slider("Light ×", e.intensity, 0f, 5f), 2);
+                    string col = ColorPicker("Colour", string.IsNullOrEmpty(e.color) ? "#ffffff" : e.color, "comp." + ckey);
+                    if (!string.IsNullOrEmpty(e.color) || col != "#ffffff") e.color = col;
+                    GUILayout.BeginHorizontal();
+                    if (!string.IsNullOrEmpty(e.color) && GUILayout.Button("stock colour", _btnSmall, GUILayout.Width(100))) e.color = "";
+                    if (!e.IsStock && GUILayout.Button("back to stock", _btnSmall, GUILayout.Width(100))) { _recipe.components.Remove(e); }
+                    GUILayout.EndHorizontal();
+                    GUILayout.EndVertical(); GUILayout.EndHorizontal();
+                }
+            }
+            GUILayout.Label("Changes take effect on the next shot (Space).", _small);
         }
 
         /// <summary>The CustomAmmoCategories knobs on the base effect: colour table and rule, projectile scale, speed.</summary>

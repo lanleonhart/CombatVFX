@@ -131,6 +131,7 @@ namespace GNFX
         public Vector3 scale = Vector3.one;                              // ProjectileScale
         public float speedMul = 1f;                                      // ProjectileSpeedMultiplier
         public BaseSettings baseSettings = new BaseSettings();           // the stock effect's own numbers and pieces
+        public List<ComponentTweak> components = new List<ComponentTweak>();   // adjustments to the particle systems, lines and lights inside those pieces
         // the recipe in the library and in the game
         public string tags = "";                                         // comma-separated, free text, for the library filter
         public string sound = "";                                        // studio-only: recipes\sounds file played at the muzzle on fire
@@ -170,6 +171,8 @@ namespace GNFX
             if (r.layers == null) r.layers = new List<Layer>();
             if (r.colors == null) r.colors = new List<ColorEntry>();
             if (r.baseSettings == null) r.baseSettings = new BaseSettings();
+            if (r.components == null) r.components = new List<ComponentTweak>();
+            r.components.RemoveAll(c => c == null || c.IsStock);
             foreach (Layer l in r.layers) if (string.IsNullOrEmpty(l.tintMode)) l.tintMode = "stock";
             r.layers.RemoveAll(l => l == null || string.IsNullOrEmpty(l.kind));
             if (r.scale == Vector3.zero) r.scale = Vector3.one;
