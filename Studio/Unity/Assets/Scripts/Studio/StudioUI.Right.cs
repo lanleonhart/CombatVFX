@@ -13,7 +13,7 @@ namespace GNFX
     public partial class StudioUI
     {
         private static readonly string[] TABS = { "Layer", "Shot", "Look", "Game" };
-        private string _weaponFilter = "", _assignFilter = ""; private WeaponDefs.Def _weaponPick; private string _exportNote = "";
+        private string _weaponFilter = "", _assignFilter = "", _chassisFilter2 = ""; private WeaponDefs.Def _weaponPick; private string _exportNote = "";
 
         private void Right(Rect r)
         {
@@ -274,6 +274,35 @@ namespace GNFX
                         }
                 }
                 else GUILayout.Label("Type part of a weapon name or id.", _small);
+            }
+            GUILayout.Space(8); GUILayout.Label("ONLY ON THESE 'MECHS · leave empty for everywhere", _cap);
+            GUILayout.Label("With chassis listed, the weapons above play this recipe only when mounted on these 'Mechs; the same weapon on anything else stays stock.", _small);
+            for (int i = 0; i < _recipe.chassis.Count; i++)
+            {
+                GUILayout.BeginHorizontal(); GUILayout.Label("· " + _recipe.chassis[i], _small);
+                if (GUILayout.Button("✕", _btnSmall, GUILayout.Width(26))) { _recipe.chassis.RemoveAt(i); GUILayout.EndHorizontal(); break; }
+                GUILayout.EndHorizontal();
+            }
+            if (Weapons.Done)
+            {
+                int cn = 0;
+                lock (Weapons.Defs)
+                {
+                    foreach (WeaponDefs.Chassis ch in Weapons.ChassisDefs)
+                        if (!string.IsNullOrEmpty(ch.Prefab) && string.Equals(ch.Prefab, Rig.ShooterId, StringComparison.OrdinalIgnoreCase) && !_recipe.chassis.Contains(ch.Id))
+                        { if (++cn == 1) GUILayout.Label("The stage's shooter:", _small); if (GUILayout.Button("+ " + ch.Name + "  ·  " + ch.Id + "  ·  " + ch.Mod, _btn)) _recipe.chassis.Add(ch.Id); }
+                    _chassisFilter2 = GUILayout.TextField(_chassisFilter2, _field);
+                    if (_chassisFilter2.Length >= 2)
+                    {
+                        int m = 0;
+                        foreach (WeaponDefs.Chassis ch in Weapons.ChassisDefs)
+                        {
+                            if (_recipe.chassis.Contains(ch.Id) || (ch.Id.IndexOf(_chassisFilter2, StringComparison.OrdinalIgnoreCase) < 0 && ch.Name.IndexOf(_chassisFilter2, StringComparison.OrdinalIgnoreCase) < 0)) continue;
+                            if (++m > 12) { GUILayout.Label("… type more to narrow", _small); break; }
+                            if (GUILayout.Button("+ " + ch.Name + "  ·  " + ch.Id + "  ·  " + ch.Mod, _btn)) _recipe.chassis.Add(ch.Id);
+                        }
+                    }
+                }
             }
             GUILayout.Space(8); GUILayout.Label("WRITE THE CAC FIELDS INTO A WEAPON FILE", _cap);
             GUILayout.Label("Only for the colour, scale and speed knobs, which CustomAmmoCategories reads from the weapon's own JSON. Vanilla weapons need a copy of the file in a mod first.", _small);

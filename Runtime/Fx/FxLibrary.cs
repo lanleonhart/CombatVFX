@@ -35,7 +35,7 @@ namespace CombatVFX.Fx
     internal static class FxLibrary
     {
         private static readonly Dictionary<string, FxRecipe> _recipes = new Dictionary<string, FxRecipe>(StringComparer.OrdinalIgnoreCase);
-        private static readonly Dictionary<string, FxRecipe> _byWeapon = new Dictionary<string, FxRecipe>(StringComparer.OrdinalIgnoreCase);   // weapon def id -> recipe, from the recipes' weapons lists
+        private static readonly Dictionary<string, List<FxRecipe>> _byWeapon = new Dictionary<string, List<FxRecipe>>(StringComparer.OrdinalIgnoreCase);   // weapon def id -> recipes naming it (a chassis-limited one wins over an open one)
         private static readonly HashSet<string> _requested = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private static FileSystemWatcher _watcher;
         private static volatile bool _dirty = true;
@@ -58,11 +58,11 @@ namespace CombatVFX.Fx
                         FxRecipe r = FxRecipe.Parse(File.ReadAllText(file));
                         r.File = file;
                         _recipes[Path.GetFileNameWithoutExtension(file)] = r;
-                        foreach (string w in r.weapons) if (!string.IsNullOrEmpty(w)) _byWeapon[w.Trim()] = r;
+                        foreach (string w in r.weapons) if (!string.IsNullOrEmpty(w)) { List<FxRecipe> l; if (!_byWeapon.TryGetValue(w.Trim(), out l)) _byWeapon[w.Trim()] = l = new List<FxRecipe>(); l.Add(r); }
                     }
                     catch (Exception e) { ModEntry.Log("[Fx] bad recipe " + Path.GetFileName(file) + ": " + e.Message); }
                 }
-                ModEntry.Log("[Fx] " + _recipes.Count + " recipes loaded from " + Dir + (_recipes.Count > 0 ? ": " + string.Join(", ", _recipes.Select(kv => kv.Key + (kv.Value.weapons.Count > 0 ? " [" + string.Join(", ", kv.Value.weapons.ToArray()) + "]" : " [tag only]")).OrderBy(k => k).ToArray()) : ""));
+                ModEntry.Log("[Fx] " + _recipes.Count + " recipes loaded from " + Dir + (_recipes.Count > 0 ? ": " + string.Join(", ", _recipes.Select(kv => kv.Key + (kv.Value.weapons.Count > 0 ? " [" + string.Join(", ", kv.Value.weapons.ToArray()) + (kv.Value.chassis.Count > 0 ? " on " + string.Join(", ", kv.Value.chassis.ToArray()) : "") + "]" : " [tag only]")).OrderBy(k => k).ToArray()) : ""));
                 Watch();
             }
             catch (Exception e) { ModEntry.Log("[Fx] recipes: " + e.Message); }
@@ -86,8 +86,18 @@ namespace CombatVFX.Fx
         {
             if (weapon == null) return null;
             EnsureLoaded();
-            FxRecipe byId;
-            if (!string.IsNullOrEmpty(weapon.defId) && _byWeapon.TryGetValue(weapon.defId, out byId)) return byId;
+            List<FxRecipe> byId;
+            if (!string.IsNullOrEmpty(weapon.defId) && _byWeapon.TryGetValue(weapon.defId, out byId))
+            {
+                string chassisId = (weapon.parent as Mech)?.MechDef?.ChassisID;
+                FxRecipe open = null;
+                foreach (FxRecipe r in byId)
+                {
+                    if (r.chassis.Count == 0) { open = open ?? r; continue; }
+                    foreach (string c in r.chassis) if (!string.IsNullOrEmpty(c) && string.Equals(c.Trim(), chassisId, StringComparison.OrdinalIgnoreCase)) return r;
+                }
+                if (open != null) return open;
+            }
             var tags = weapon.componentDef?.ComponentTags;
             if (tags == null) return null;
             foreach (string tag in tags)

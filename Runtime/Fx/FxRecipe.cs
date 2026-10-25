@@ -109,6 +109,7 @@ namespace CombatVFX.Fx
         public FxBase baseSettings = new FxBase();
         public List<FxTweak> components = new List<FxTweak>();
         public List<string> weapons = new List<string>();      // weapon def ids this recipe plays on, besides any weapon tagged vfx_<name>
+        public List<string> chassis = new List<string>();      // when set, only on these chassis def ids (the weapon on these 'Mechs); empty = anywhere
         public string tags = "";
         public string sound = "";
         public string impactSound = "";
@@ -135,6 +136,7 @@ namespace CombatVFX.Fx
             if (r.baseSettings == null) r.baseSettings = new FxBase();
             if (r.components == null) r.components = new List<FxTweak>();
             if (r.weapons == null) r.weapons = new List<string>();
+            if (r.chassis == null) r.chassis = new List<string>();
             r.components.RemoveAll(t => t == null || t.IsStock);
             if (r.colors == null) r.colors = new List<FxColor>();
             r.layers.RemoveAll(l => l == null || string.IsNullOrEmpty(l.kind));

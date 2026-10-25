@@ -161,6 +161,7 @@ namespace GNFX
         public BaseSettings baseSettings = new BaseSettings();           // the stock effect's own numbers and pieces
         public List<ComponentTweak> components = new List<ComponentTweak>();   // adjustments to the particle systems, lines and lights inside those pieces
         public List<string> weapons = new List<string>();                 // weapon def ids this recipe plays on (besides any weapon tagged vfx_<name>)
+        public List<string> chassis = new List<string>();                 // when set, only on these chassis (the weapon on these 'Mechs); empty = anywhere
         // the recipe in the library and in the game
         public string tags = "";                                         // comma-separated, free text, for the library filter
         public string sound = "";                                        // studio-only: recipes\sounds file played at the muzzle on fire
@@ -202,6 +203,7 @@ namespace GNFX
             if (r.baseSettings == null) r.baseSettings = new BaseSettings();
             if (r.components == null) r.components = new List<ComponentTweak>();
             if (r.weapons == null) r.weapons = new List<string>();
+            if (r.chassis == null) r.chassis = new List<string>();
             r.components.RemoveAll(c => c == null || c.IsStock);
             foreach (Layer l in r.layers) if (string.IsNullOrEmpty(l.tintMode)) l.tintMode = "stock";
             r.layers.RemoveAll(l => l == null || string.IsNullOrEmpty(l.kind));

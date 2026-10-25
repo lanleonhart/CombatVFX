@@ -137,7 +137,9 @@ Colour fields anywhere in the studio open a full picker on a double-click of the
 2. **Assign and install**: Game tab, "Assign to weapons": add the weapon ids the recipe is for (the list covers the
    vanilla weapons and every mod's), then "Install recipe into Mods\CombatVFX\effects". That is the whole
    assignment: the recipe file carries its `weapons` list and the mod matches on the weapon's def id. The mod watches
-   the folder and reloads on change, so you can save in the studio with the game running. A weapon tagged
+   the folder and reloads on change, so you can save in the studio with the game running. "Only on these 'Mechs"
+   limits the recipe to chassis ids, so a stock weapon can carry a special effect on one 'Mech and stay stock on all
+   others; a chassis-limited recipe wins over an open one for the same weapon. A weapon tagged
    `vfx_<recipe>` in its `ComponentTags` plays the recipe too, for mods that prefer tags.
 3. **CAC fields**: "Write the CAC fields into a weapon file" is only for the colour, scale and speed knobs, which
    CustomAmmoCategories reads from the weapon's own JSON; it leaves a `.bak`. Vanilla weapons need a copy in a mod
