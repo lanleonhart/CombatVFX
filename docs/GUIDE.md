@@ -122,8 +122,10 @@ lets you remove them, and places one GN particle emitter on a bone of the model:
 the time, the drive glow and the jump burst length. Space jumps. Save writes `recipes\jets\<name>.json`; "Install"
 copies it to `Mods\CombatVFX\jets`.
 
-In the game, CombatVFX puts the emitter on every 'Mech whose chassis carries the ChassisTag `vfx_jets_<name>`, idles
-it, bursts it when the game starts the jets, and stops the stock exhausts if the recipe says so. The folder hot-reloads
+"Assign to 'Mechs" lists the chassis ids the recipe plays on (this 'Mech's chassis is offered first; search for others);
+Install copies the file, and that is the whole assignment. A chassis tagged `vfx_jets_<name>` plays it too. In the
+game, CombatVFX puts the emitter on those 'Mechs, idles it, bursts it when the game starts the jets, and stops the
+stock exhausts if the recipe says so. Its log names every chassis it saw without a recipe, with the chassis's tags. The folder hot-reloads
 for the next 'Mech that spawns.
 
 Colour fields anywhere in the studio open a full picker on a double-click of the swatch or the hex.
@@ -132,11 +134,14 @@ Colour fields anywhere in the studio open a full picker on a double-click of the
 
 1. **Install the mod**: copy `Mods\CombatVFX` into the game's `Mods` folder. It needs ModTek. It does nothing until it
    finds a recipe and a tagged weapon.
-2. **Install the recipe**: Game tab, "Install recipe into Mods\CombatVFX\effects". The file name becomes the tag:
-   `my_laser.json` is played on weapons tagged `vfx_my_laser`. The mod watches the folder and reloads on change, so
-   you can save in the studio with the game running.
-3. **Tag the weapon**: add `vfx_<recipe>` to the weapon def's `ComponentTags.items`. "Write the recipe into this
-   weapon" does it for you, together with the CAC fields, and leaves a `.bak`.
+2. **Assign and install**: Game tab, "Assign to weapons": add the weapon ids the recipe is for (the list covers the
+   vanilla weapons and every mod's), then "Install recipe into Mods\CombatVFX\effects". That is the whole
+   assignment: the recipe file carries its `weapons` list and the mod matches on the weapon's def id. The mod watches
+   the folder and reloads on change, so you can save in the studio with the game running. A weapon tagged
+   `vfx_<recipe>` in its `ComponentTags` plays the recipe too, for mods that prefer tags.
+3. **CAC fields**: "Write the CAC fields into a weapon file" is only for the colour, scale and speed knobs, which
+   CustomAmmoCategories reads from the weapon's own JSON; it leaves a `.bak`. Vanilla weapons need a copy in a mod
+   first.
 4. **CAC fields**: `WeaponEffectID`, `ColorsTable`, `ColorChangeRule`, `ColorSpeedChange`, `ProjectileScale`,
    `ProjectileSpeedMultiplier` at the top level of the weapon JSON. Only with CustomAmmoCategories installed.
 5. **Test in a mission**: with `FxTestHotkey: true` in `Mods\CombatVFX\settings.json` (or the game's test tools on),

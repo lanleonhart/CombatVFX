@@ -13,7 +13,7 @@ namespace GNFX
     public partial class StudioUI
     {
         private static readonly string[] TABS = { "Layer", "Shot", "Look", "Game" };
-        private string _weaponFilter = ""; private WeaponDefs.Def _weaponPick; private string _exportNote = "";
+        private string _weaponFilter = "", _assignFilter = ""; private WeaponDefs.Def _weaponPick; private string _exportNote = "";
 
         private void Right(Rect r)
         {
@@ -243,11 +243,40 @@ namespace GNFX
             {
                 GUILayout.Label("Layers: the CombatVFX mod reads Mods\\CombatVFX\\effects\\" + Slug(_recipe.name) + ".json and plays it on weapons tagged vfx_" + Slug(_recipe.name) + ".", _small);
                 _recipe.hideStock = GUILayout.Toggle(_recipe.hideStock, " Hide the stock projectile in the game (the layers replace it)", _label);
-                if (GUILayout.Button("Install recipe into Mods\\CombatVFX\\effects", _btn)) InstallRecipe();
+                if (GUILayout.Button("Install recipe into Mods\\CombatVFX\\effects" + (_recipe.weapons.Count > 0 ? "  ·  assigned to " + _recipe.weapons.Count + " weapon" + (_recipe.weapons.Count == 1 ? "" : "s") : ""), _btn)) InstallRecipe();
                 if (!Directory.Exists(Path.Combine(Assets.GamePath ?? "", "Mods", "CombatVFX"))) GUILayout.Label("The CombatVFX mod is not installed in this game yet; the layers need it to play. It ships with the studio (Mods\\CombatVFX).", _small);
             }
             if (!_recipe.HasBase && !_recipe.HasLayers) GUILayout.Label("Pick a base game effect or add a layer first.", _small);
-            GUILayout.Space(8); GUILayout.Label("WRITE INTO A WEAPON FILE", _cap);
+            GUILayout.Space(8); GUILayout.Label("ASSIGN TO WEAPONS · the recipe plays on these weapon ids", _cap);
+            for (int i = 0; i < _recipe.weapons.Count; i++)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("· " + _recipe.weapons[i], _small);
+                if (GUILayout.Button("✕", _btnSmall, GUILayout.Width(26))) { _recipe.weapons.RemoveAt(i); GUILayout.EndHorizontal(); break; }
+                GUILayout.EndHorizontal();
+            }
+            if (_recipe.weapons.Count == 0) GUILayout.Label("None yet. Add the weapon ids below, then Install: that is the whole assignment. (A weapon tagged vfx_" + Slug(_recipe.name) + " plays it too.)", _small);
+            if (!Weapons.Done && !Weapons.Indexing) { if (GUILayout.Button("Find the game's weapons (vanilla and mods)", _btn)) Weapons.Index(Assets.GamePath); }
+            else if (Weapons.Indexing) GUILayout.Label("Indexing the weapons…", _small);
+            else
+            {
+                _assignFilter = GUILayout.TextField(_assignFilter, _field);
+                if (_assignFilter.Length >= 2)
+                {
+                    int n = 0;
+                    lock (Weapons.Defs)
+                        foreach (WeaponDefs.Def d in Weapons.Defs)
+                        {
+                            if (_recipe.weapons.Contains(d.Id)) continue;
+                            if (d.Id.IndexOf(_assignFilter, StringComparison.OrdinalIgnoreCase) < 0 && d.Name.IndexOf(_assignFilter, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            if (++n > 12) { GUILayout.Label("… type more to narrow the list", _small); break; }
+                            if (GUILayout.Button("+ " + d.Label, _btn)) _recipe.weapons.Add(d.Id);
+                        }
+                }
+                else GUILayout.Label("Type part of a weapon name or id.", _small);
+            }
+            GUILayout.Space(8); GUILayout.Label("WRITE THE CAC FIELDS INTO A WEAPON FILE", _cap);
+            GUILayout.Label("Only for the colour, scale and speed knobs, which CustomAmmoCategories reads from the weapon's own JSON. Vanilla weapons need a copy of the file in a mod first.", _small);
             if (!Weapons.Done && !Weapons.Indexing) { if (GUILayout.Button("Find weapon files under Mods", _btn)) Weapons.Index(Assets.GamePath); }
             else if (Weapons.Indexing) GUILayout.Label("Indexing the weapon files…", _small);
             else
@@ -285,7 +314,8 @@ namespace GNFX
                 Directory.CreateDirectory(dir);
                 string file = Path.Combine(dir, Slug(_recipe.name) + ".json");
                 File.WriteAllText(file, _recipe.ToJson());
-                Toast("Installed " + file + (Process("BattleTech") ? " — the game is running; CombatVFX reloads it on the spot" : ""));
+                SaveRecipe();
+                Toast("Installed " + file + (_recipe.weapons.Count > 0 ? " for " + string.Join(", ", _recipe.weapons.ToArray()) : " (no weapons assigned yet)") + (Process("BattleTech") ? " — the game reloads it on the spot" : ""));
             }
             catch (Exception e) { Toast("Could not install: " + e.Message); }
         }

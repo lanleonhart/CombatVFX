@@ -16,7 +16,9 @@ namespace GNFX
     public class WeaponDefs
     {
         public class Def { public string Path, Id, Name, Mod; public string Label => Name + "  ·  " + Id + "  ·  " + Mod; }
+        public class Chassis { public string Path, Id, Name, Prefab, Mod; }
         public readonly List<Def> Defs = new List<Def>();
+        public readonly List<Chassis> ChassisDefs = new List<Chassis>();
         public volatile bool Indexing, Done;
         public string Error;
 
@@ -29,11 +31,13 @@ namespace GNFX
                 try
                 {
                     string mods = System.IO.Path.Combine(gamePath, "Mods");
-                    var found = new List<Def>();
-                    foreach (string modDir in Directory.GetDirectories(mods))
+                    var found = new List<Def>(); var chassisFound = new List<Chassis>();
+                    var roots = new List<string[]> { new[] { System.IO.Path.Combine(gamePath, "BattleTech_Data", "StreamingAssets", "data"), "vanilla" } };
+                    if (Directory.Exists(mods)) foreach (string modDir in Directory.GetDirectories(mods)) if (!System.IO.Path.GetFileName(modDir).StartsWith(".")) roots.Add(new[] { modDir, System.IO.Path.GetFileName(modDir) });
+                    foreach (string[] root in roots)
                     {
-                        string modName = System.IO.Path.GetFileName(modDir);
-                        if (modName.StartsWith(".")) continue;
+                        string modDir = root[0], modName = root[1];
+                        if (!Directory.Exists(modDir)) continue;
                         foreach (string file in Directory.GetFiles(modDir, "*.json", SearchOption.AllDirectories))
                         {
                             try
@@ -41,6 +45,12 @@ namespace GNFX
                                 var info = new FileInfo(file);
                                 if (info.Length > 300000 || info.Length < 200) continue;
                                 string s = File.ReadAllText(file);
+                                if (System.IO.Path.GetFileName(file).StartsWith("chassisdef", StringComparison.OrdinalIgnoreCase) && s.IndexOf("\"PrefabIdentifier\"", StringComparison.Ordinal) >= 0)
+                                {
+                                    Match cid = Regex.Match(s, "\"Id\"\\s*:\\s*\"([^\"]+)\""), cname = Regex.Match(s, "\"UIName\"\\s*:\\s*\"([^\"]+)\""), pre = Regex.Match(s, "\"PrefabIdentifier\"\\s*:\\s*\"([^\"]+)\"");
+                                    chassisFound.Add(new Chassis { Path = file, Id = cid.Success ? cid.Groups[1].Value : System.IO.Path.GetFileNameWithoutExtension(file), Name = cname.Success ? cname.Groups[1].Value : "", Prefab = pre.Success ? pre.Groups[1].Value : "", Mod = modName });
+                                    continue;
+                                }
                                 if (s.IndexOf("\"WeaponEffectID\"", StringComparison.Ordinal) < 0 || s.IndexOf("\"Damage\"", StringComparison.Ordinal) < 0) continue;
                                 Match id = Regex.Match(s, "\"Id\"\\s*:\\s*\"([^\"]+)\""), name = Regex.Match(s, "\"UIName\"\\s*:\\s*\"([^\"]+)\"");
                                 found.Add(new Def { Path = file, Id = id.Success ? id.Groups[1].Value : System.IO.Path.GetFileNameWithoutExtension(file), Name = name.Success ? name.Groups[1].Value : "", Mod = modName });
@@ -49,7 +59,8 @@ namespace GNFX
                         }
                     }
                     found.Sort((a, b) => string.Compare(a.Name + a.Id, b.Name + b.Id, StringComparison.OrdinalIgnoreCase));
-                    lock (Defs) { Defs.Clear(); Defs.AddRange(found); }
+                    chassisFound.Sort((a, b) => string.Compare(a.Name + a.Id, b.Name + b.Id, StringComparison.OrdinalIgnoreCase));
+                    lock (Defs) { Defs.Clear(); Defs.AddRange(found); ChassisDefs.Clear(); ChassisDefs.AddRange(chassisFound); }
                 }
                 catch (Exception e) { Error = e.Message; }
                 Indexing = false; Done = true;

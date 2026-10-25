@@ -11,7 +11,7 @@ namespace GNFX
     {
         public JetsPlayer Jets;
         private System.Collections.Generic.List<string> _jetFiles = new System.Collections.Generic.List<string>();
-        private string _jetsPath; private bool _pickBone; private string _boneFilter = "";
+        private string _jetsPath; private bool _pickBone; private string _boneFilter = "", _chassisFilter = "";
         private string JetsDir => Path.Combine(RecipesDir ?? ".", "jets");
 
         private void RefreshJetFiles()
@@ -105,8 +105,38 @@ namespace GNFX
             GUILayout.EndHorizontal();
             foreach (string f in _jetFiles)
                 if (GUILayout.Button(Path.GetFileNameWithoutExtension(f).Replace('_', ' '), f == _jetsPath ? _btnOn : _btn)) { try { Jets.Recipe = JetsRecipe.Parse(File.ReadAllText(f)); _jetsPath = f; Jets.Rebuild(); FocusEmitter(); Toast("Loaded " + Path.GetFileName(f)); } catch (Exception e) { Toast(e.Message); } }
+            GUILayout.Space(6); GUILayout.Label("ASSIGN TO 'MECHS · chassis ids this plays on", _cap);
+            for (int i = 0; i < j.chassis.Count; i++)
+            {
+                GUILayout.BeginHorizontal(); GUILayout.Label("· " + j.chassis[i], _small);
+                if (GUILayout.Button("✕", _btnSmall, GUILayout.Width(26))) { j.chassis.RemoveAt(i); GUILayout.EndHorizontal(); break; }
+                GUILayout.EndHorizontal();
+            }
+            if (!Weapons.Done && !Weapons.Indexing) { if (GUILayout.Button("Find the game's chassis (vanilla and mods)", _btn)) Weapons.Index(Assets.GamePath); }
+            else if (Weapons.Indexing) GUILayout.Label("Indexing…", _small);
+            else
+            {
+                int n = 0;
+                lock (Weapons.Defs)
+                {
+                    foreach (WeaponDefs.Chassis ch in Weapons.ChassisDefs)
+                        if (!string.IsNullOrEmpty(ch.Prefab) && string.Equals(ch.Prefab, Rig.ShooterId, StringComparison.OrdinalIgnoreCase) && !j.chassis.Contains(ch.Id))
+                        { if (++n == 1) GUILayout.Label("This 'Mech's chassis:", _small); if (GUILayout.Button("+ " + ch.Name + "  ·  " + ch.Id + "  ·  " + ch.Mod, _btn)) j.chassis.Add(ch.Id); }
+                    _chassisFilter = GUILayout.TextField(_chassisFilter, _field);
+                    if (_chassisFilter.Length >= 2)
+                    {
+                        int m = 0;
+                        foreach (WeaponDefs.Chassis ch in Weapons.ChassisDefs)
+                        {
+                            if (j.chassis.Contains(ch.Id) || (ch.Id.IndexOf(_chassisFilter, StringComparison.OrdinalIgnoreCase) < 0 && ch.Name.IndexOf(_chassisFilter, StringComparison.OrdinalIgnoreCase) < 0)) continue;
+                            if (++m > 12) { GUILayout.Label("… type more to narrow", _small); break; }
+                            if (GUILayout.Button("+ " + ch.Name + "  ·  " + ch.Id + "  ·  " + ch.Mod, _btn)) j.chassis.Add(ch.Id);
+                        }
+                    }
+                }
+            }
             GUILayout.Space(6); GUILayout.Label("IN THE GAME", _cap);
-            GUILayout.Label("CombatVFX plays a jets recipe on every 'Mech whose chassis carries the tag vfx_jets_" + Slug(j.name) + " (ChassisTags). The recipe file goes in Mods\\CombatVFX\\jets.", _small);
+            GUILayout.Label("CombatVFX plays this on the chassis listed above, and on any chassis tagged vfx_jets_" + Slug(j.name) + ". Install copies the file to Mods\\CombatVFX\\jets; that is the whole assignment.", _small);
             if (GUILayout.Button("Install into Mods\\CombatVFX\\jets", _btn)) InstallJets();
             GUILayout.EndScrollView();
             GUILayout.EndArea();
@@ -124,7 +154,8 @@ namespace GNFX
             {
                 string dir = Path.Combine(Assets.GamePath, "Mods", "CombatVFX", "jets"); Directory.CreateDirectory(dir);
                 string f = Path.Combine(dir, Slug(Jets.Recipe.name) + ".json"); File.WriteAllText(f, Jets.Recipe.ToJson());
-                Toast("Installed " + f + " · tag a chassis vfx_jets_" + Slug(Jets.Recipe.name));
+                SaveJets();
+                Toast("Installed " + f + (Jets.Recipe.chassis.Count > 0 ? " for " + string.Join(", ", Jets.Recipe.chassis.ToArray()) : " (no chassis assigned yet)"));
             }
             catch (Exception e) { Toast("Could not install: " + e.Message); }
         }

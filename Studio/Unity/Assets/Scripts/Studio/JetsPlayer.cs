@@ -27,8 +27,9 @@ namespace GNFX
         public float burst = 2.6f;                         // seconds the jump burst lasts
         public bool hideStock = true;                      // remove the game's own jet exhausts
         public string tags = "";
+        public List<string> chassis = new List<string>();  // chassis def ids this plays on (besides any chassis tagged vfx_jets_<name>)
 
-        public static JetsRecipe Parse(string json) { var r = JsonUtility.FromJson<JetsRecipe>(json); if (r == null) throw new Exception("not a jets recipe"); return r; }
+        public static JetsRecipe Parse(string json) { var r = JsonUtility.FromJson<JetsRecipe>(json); if (r == null) throw new Exception("not a jets recipe"); if (r.chassis == null) r.chassis = new List<string>(); return r; }
         public string ToJson() => JsonUtility.ToJson(this, true);
     }
 

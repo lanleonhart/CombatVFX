@@ -30,6 +30,7 @@ namespace CombatVFX.Fx
         public float burst = 2.6f;
         public bool hideStock = true;
         public string tags = "";
+        public List<string> chassis = new List<string>();   // chassis def ids this plays on, besides any chassis tagged vfx_jets_<name>
         [NonSerialized] public string File;
     }
 
@@ -39,7 +40,9 @@ namespace CombatVFX.Fx
         private static readonly Dictionary<string, JetsRecipe> _recipes = new Dictionary<string, JetsRecipe>(StringComparer.OrdinalIgnoreCase);
         private static FileSystemWatcher _watcher;
         private static volatile bool _dirty = true;
+        private static readonly HashSet<string> _loggedChassis = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         internal static string Dir => Path.Combine(ModEntry.ModDirectory ?? ".", "jets");
+        internal static int Count { get { EnsureLoaded(); return _recipes.Count; } }
 
         internal static void EnsureLoaded()
         {
@@ -50,10 +53,10 @@ namespace CombatVFX.Fx
                 if (!Directory.Exists(Dir)) { Watch(); return; }
                 foreach (string file in Directory.GetFiles(Dir, "*.json"))
                 {
-                    try { var r = JsonUtility.FromJson<JetsRecipe>(System.IO.File.ReadAllText(file)); if (r != null) { r.File = file; _recipes[Path.GetFileNameWithoutExtension(file)] = r; } }
+                    try { var r = JsonUtility.FromJson<JetsRecipe>(System.IO.File.ReadAllText(file)); if (r != null) { if (r.chassis == null) r.chassis = new List<string>(); r.File = file; _recipes[Path.GetFileNameWithoutExtension(file)] = r; } }
                     catch (Exception e) { ModEntry.Log("[Jets] bad recipe " + Path.GetFileName(file) + ": " + e.Message); }
                 }
-                if (_recipes.Count > 0) ModEntry.Log("[Jets] " + _recipes.Count + " jets recipes: " + string.Join(", ", _recipes.Keys.OrderBy(k => k).ToArray()));
+                if (_recipes.Count > 0) ModEntry.Log("[Jets] " + _recipes.Count + " jets recipes: " + string.Join(", ", _recipes.Select(kv => kv.Key + (kv.Value.chassis.Count > 0 ? " [" + string.Join(", ", kv.Value.chassis.ToArray()) + "]" : " [tag only]")).OrderBy(k => k).ToArray()));
                 Watch();
             }
             catch (Exception e) { ModEntry.Log("[Jets] " + e.Message); }
@@ -77,14 +80,17 @@ namespace CombatVFX.Fx
         {
             EnsureLoaded();
             if (_recipes.Count == 0) return null;
+            string chassisId = mech?.MechDef?.ChassisID ?? mech?.MechDef?.Chassis?.Description?.Id;
+            foreach (JetsRecipe r in _recipes.Values) foreach (string c in r.chassis) if (!string.IsNullOrEmpty(c) && string.Equals(c.Trim(), chassisId, StringComparison.OrdinalIgnoreCase)) return r;
             var tags = mech?.MechDef?.Chassis?.ChassisTags;
-            if (tags == null) return null;
-            foreach (string tag in tags)
-            {
-                if (tag == null || !tag.StartsWith(TagPrefix, StringComparison.OrdinalIgnoreCase)) continue;
-                JetsRecipe r;
-                if (_recipes.TryGetValue(tag.Substring(TagPrefix.Length), out r)) return r;
-            }
+            if (tags != null)
+                foreach (string tag in tags)
+                {
+                    if (tag == null || !tag.StartsWith(TagPrefix, StringComparison.OrdinalIgnoreCase)) continue;
+                    JetsRecipe r;
+                    if (_recipes.TryGetValue(tag.Substring(TagPrefix.Length), out r)) return r;
+                }
+            if (chassisId != null && _loggedChassis.Add(chassisId)) ModEntry.Log("[Jets] no jets recipe for chassis " + chassisId + " (tags: " + (tags != null ? string.Join(", ", tags.ToArray()) : "none") + "); recipes assign by chassis id or by tag vfx_jets_<recipe>");
             return null;
         }
     }

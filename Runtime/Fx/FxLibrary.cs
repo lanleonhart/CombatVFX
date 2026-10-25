@@ -35,6 +35,7 @@ namespace CombatVFX.Fx
     internal static class FxLibrary
     {
         private static readonly Dictionary<string, FxRecipe> _recipes = new Dictionary<string, FxRecipe>(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, FxRecipe> _byWeapon = new Dictionary<string, FxRecipe>(StringComparer.OrdinalIgnoreCase);   // weapon def id -> recipe, from the recipes' weapons lists
         private static readonly HashSet<string> _requested = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private static FileSystemWatcher _watcher;
         private static volatile bool _dirty = true;
@@ -46,7 +47,7 @@ namespace CombatVFX.Fx
         {
             if (!_dirty) return;
             _dirty = false;
-            _recipes.Clear();
+            _recipes.Clear(); _byWeapon.Clear();
             try
             {
                 if (!Directory.Exists(Dir)) { if (!_loggedEmpty) { ModEntry.Log("[Fx] no effects folder at " + Dir + "; recipes from the Effects Studio go there"); _loggedEmpty = true; } Watch(); return; }
@@ -57,10 +58,11 @@ namespace CombatVFX.Fx
                         FxRecipe r = FxRecipe.Parse(File.ReadAllText(file));
                         r.File = file;
                         _recipes[Path.GetFileNameWithoutExtension(file)] = r;
+                        foreach (string w in r.weapons) if (!string.IsNullOrEmpty(w)) _byWeapon[w.Trim()] = r;
                     }
                     catch (Exception e) { ModEntry.Log("[Fx] bad recipe " + Path.GetFileName(file) + ": " + e.Message); }
                 }
-                ModEntry.Log("[Fx] " + _recipes.Count + " recipes loaded from " + Dir + (_recipes.Count > 0 ? ": " + string.Join(", ", _recipes.Keys.OrderBy(k => k).ToArray()) : ""));
+                ModEntry.Log("[Fx] " + _recipes.Count + " recipes loaded from " + Dir + (_recipes.Count > 0 ? ": " + string.Join(", ", _recipes.Select(kv => kv.Key + (kv.Value.weapons.Count > 0 ? " [" + string.Join(", ", kv.Value.weapons.ToArray()) + "]" : " [tag only]")).OrderBy(k => k).ToArray()) : ""));
                 Watch();
             }
             catch (Exception e) { ModEntry.Log("[Fx] recipes: " + e.Message); }
@@ -82,9 +84,12 @@ namespace CombatVFX.Fx
         /// <summary>The recipe a weapon's vfx_ tag names, or null.</summary>
         internal static FxRecipe ForWeapon(Weapon weapon)
         {
-            var tags = weapon?.componentDef?.ComponentTags;
-            if (tags == null) return null;
+            if (weapon == null) return null;
             EnsureLoaded();
+            FxRecipe byId;
+            if (!string.IsNullOrEmpty(weapon.defId) && _byWeapon.TryGetValue(weapon.defId, out byId)) return byId;
+            var tags = weapon.componentDef?.ComponentTags;
+            if (tags == null) return null;
             foreach (string tag in tags)
             {
                 if (tag == null || !tag.StartsWith(FxSettings.TagPrefix, StringComparison.OrdinalIgnoreCase)) continue;
@@ -240,7 +245,7 @@ namespace CombatVFX.Fx
     {
         private static void Postfix()
         {
-            try { FxLibrary.EnsureLoaded(); FxLibrary.PreloadPrefabs(); FxTestHotkey.Ensure(); }
+            try { FxLibrary.EnsureLoaded(); FxLibrary.PreloadPrefabs(); FxJetsLibrary.EnsureLoaded(); ModEntry.Log("[Jets] " + FxJetsLibrary.Count + " jets recipes in " + FxJetsLibrary.Dir); FxTestHotkey.Ensure(); }
             catch (Exception e) { ModEntry.Log("[Fx] combat init: " + e.Message); }
         }
     }
